@@ -11,11 +11,11 @@ app.use(express.json());
 app.use(cors());
 
 // Routes
-app.use("/doctor", doctorController);
-app.use("/fde", fdeController);
-app.use("/enquiry", enquiryController);
-app.use("/appointment", appointmentController);
-app.use("/addNote", noteController);
+app.use("/ivr/doctor", doctorController);
+app.use("/ivr/fde", fdeController);
+app.use("/ivr/enquiry", enquiryController);
+app.use("/ivr/appointment", appointmentController);
+app.use("/ivr/addNote", noteController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -24,7 +24,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
