@@ -6,6 +6,7 @@ const fdeController = require("./src/controllers/fdeController");
 const enquiryController = require("./src/controllers/enquiryController");
 const appointmentController = require("./src/controllers/appointmentController");
 const noteController = require("./src/controllers/noteController");
+const actionJLRController = require("./src/controllers/actionJLRController");
 
 app.use(express.json());
 app.use(cors());
@@ -16,6 +17,7 @@ app.use("/ivr/fde", fdeController);
 app.use("/ivr/enquiry", enquiryController);
 app.use("/ivr/appointment", appointmentController);
 app.use("/ivr/addNote", noteController);
+app.use("/ivr/actionJLR", actionJLRController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
