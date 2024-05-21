@@ -36,6 +36,7 @@ const getConnectionByLocation = (loc) => {
 
   switch (loc) {
     case "Hyderabad Helpline":
+    case "Hyderabad 2":
       connection = conHyderabad;
       location = "Hyderabad";
       break;
@@ -71,17 +72,20 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Dighi":
+    case "Dighi 2 AP":
       connection = conDighi;
       location = "Dighi";
       break;
 
     case "Thane":
     case "Thane 2":
+    case "Thane - New":
       connection = conThane;
       location = "Thane";
       break;
 
     case "Belagavi":
+    case "Belagavi MP":
       connection = conBelgavi;
       location = "Belagavi";
       break;
@@ -100,6 +104,7 @@ const getConnectionByLocation = (loc) => {
     case "Navi Mumbai":
     case "Navi Mumbai 2":
     case "Navi Mumbai 3":
+    case "NM - New":
       connection = conNM;
       location = "Navi-Mumbai";
       break;
@@ -112,11 +117,13 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Nashik":
+    case "Nashik 2":
       connection = conNashik;
       location = "Nashik";
       break;
 
     case "Salunke Vihar":
+    case "Salunke Vihar 2":
       connection = conSV;
       location = "Salunkhe-Vihar";
       break;
@@ -149,11 +156,13 @@ const getConnectionByLocation = (loc) => {
     case "Andheri":
     case "Andheri  2":
     case "Andheri 2":
+    case "Andheri - New":
       connection = conAndheri;
       location = "Andheri";
       break;
 
     case "Sahakar Nagar":
+    case "Sahakar nagar 2":
       connection = conSahakarnagar;
       location = "Sahakarnagar";
 
@@ -187,6 +196,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Mysore":
+    case "Mysore - JJ":
       connection = conMysore;
       location = "Mysore";
       break;

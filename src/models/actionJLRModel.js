@@ -79,4 +79,39 @@ async function addAction(appointments) {
   }
 }
 
-module.exports = { addAction };
+async function getRecords() {
+  const connection = createPool("socialmedia");
+  console.log(connection);
+  if (!connection) {
+    const err = new Error("Invalid location");
+    console.log(err.status);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        SELECT FromNumber 
+        FROM ivrdata 
+        WHERE StartTime >= DATE_FORMAT(NOW() ,'%Y-%m-01 00:00:00')
+      `;
+
+      tempCon.query(sql, function (error, rows, fields) {
+        tempCon.release();
+        if (error) {
+          return reject(error);
+        }
+        // Extract numbers from the rows and return only the numbers
+        const numbers = rows.map((row) => row.FromNumber);
+        resolve(numbers);
+      });
+    });
+  });
+}
+
+module.exports = { addAction, getRecords };
