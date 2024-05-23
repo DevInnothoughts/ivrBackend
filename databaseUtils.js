@@ -29,6 +29,7 @@ const conSV = createPool("hmsSVDB");
 const conThane = createPool("hmsThaneDB");
 const conTilakroad = createPool("hmsTilakroadDB");
 const conUndri = createPool("hmsUndriDB");
+const conVashi = createPool("hmsVashiDB");
 
 const getConnectionByLocation = (loc) => {
   let connection;
@@ -36,6 +37,7 @@ const getConnectionByLocation = (loc) => {
 
   switch (loc) {
     case "Hyderabad Helpline":
+    case "Hyderabad":
     case "Hyderabad 2":
       connection = conHyderabad;
       location = "Hyderabad";
@@ -52,6 +54,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Surat Helpline":
+    case "Surat":
     case "Surat 1":
     case "Surat 2":
       connection = conSurat;
@@ -85,12 +88,14 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Belagavi":
+    case "Belgavi":
     case "Belagavi MP":
       connection = conBelgavi;
       location = "Belagavi";
       break;
 
     case "HSR Layout":
+    case "HSR":
       connection = conHSR;
       location = "HSR";
       break;
@@ -148,6 +153,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Secunderabad - LR":
+    case "Secunderabad":
     case "Secunderabad Helpline":
       connection = conSecunderabad;
       location = "Secunderabad";
@@ -205,6 +211,10 @@ const getConnectionByLocation = (loc) => {
       connection = conUndri;
       location = "Undri";
       break;
+
+    case "Vashi":
+      connection = conVashi;
+      location = "Vashi";
 
     default:
       connection = null;

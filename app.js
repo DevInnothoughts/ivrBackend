@@ -7,13 +7,14 @@ const enquiryController = require("./src/controllers/enquiryController");
 const appointmentController = require("./src/controllers/appointmentController");
 const noteController = require("./src/controllers/noteController");
 const actionJLRController = require("./src/controllers/actionJLRController");
-
+const patientController = require("./src/controllers/patientController");
 app.use(express.json());
 app.use(cors());
 
 // Routes
 app.use("/ivr/doctor", doctorController);
 app.use("/ivr/fde", fdeController);
+app.use("/ivr/patient", patientController);
 app.use("/ivr/enquiry", enquiryController);
 app.use("/ivr/appointment", appointmentController);
 app.use("/ivr/addNote", noteController);

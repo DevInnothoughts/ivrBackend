@@ -39,32 +39,113 @@ async function addAppointment(appointments) {
   return new Promise((resolve, reject) => {
     connection.getConnection(function (err, tempCon) {
       if (err) {
-        tempCon.release();
         return reject(err);
       }
 
-      var sql =
-        "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
-      tempCon.query(sql, [patientValues], function (error, result) {
-        if (error) {
-          tempCon.release();
-          return reject(error);
-        }
-
-        const patientId = result.insertId;
-
-        const appointmentValues = values.map((value) => [patientId, ...value]);
-
-        sql =
-          "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
-        tempCon.query(sql, [appointmentValues], function (error, result) {
-          tempCon.release();
+      if (appointments[0].patient_type === "New") {
+        console.log("new");
+        const sql =
+          "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
+        tempCon.query(sql, [patientValues], function (error, result) {
           if (error) {
+            tempCon.release();
             return reject(error);
           }
-          resolve("Appointment added!");
+
+          const patientId = result.insertId;
+
+          const appointmentValues = values.map((value) => [
+            patientId,
+            ...value,
+          ]);
+
+          const appointmentSql =
+            "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+          tempCon.query(
+            appointmentSql,
+            [appointmentValues],
+            function (error, result) {
+              tempCon.release();
+              if (error) {
+                return reject(error);
+              }
+              resolve("Appointment added!");
+            }
+          );
         });
-      });
+      } else {
+        console.log("other than new");
+        const sql = `SELECT patient_id FROM patient WHERE phone = ? AND ConfirmPatient = 1 ORDER BY date DESC LIMIT 1`;
+        tempCon.query(
+          sql,
+          [appointments[0].patient_phone.replace(/^0+/, "")],
+          function (error, results) {
+            if (error) {
+              tempCon.release();
+              return reject(error);
+            }
+
+            if (results.length === 0) {
+              // Patient not found, insert into patient table
+              const insertPatientSql =
+                "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
+              tempCon.query(
+                insertPatientSql,
+                [patientValues],
+                function (error, result) {
+                  if (error) {
+                    tempCon.release();
+                    return reject(error);
+                  }
+
+                  const patientId = result.insertId;
+
+                  const appointmentValues = values.map((value) => {
+                    value[2] = "New"; // Change patient_type to 'New'
+                    return [patientId, ...value];
+                  });
+
+                  const appointmentSql =
+                    "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+                  tempCon.query(
+                    appointmentSql,
+                    [appointmentValues],
+                    function (error, result) {
+                      tempCon.release();
+                      if (error) {
+                        return reject(error);
+                      }
+                      resolve("Appointment added!");
+                    }
+                  );
+                }
+              );
+            } else {
+              // Patient found, use the existing patient ID
+              const patientId = results[0].patient_id;
+
+              const appointmentValues = values.map((value) => [
+                patientId,
+                ...value,
+              ]);
+
+              const appointmentSql =
+                "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+              tempCon.query(
+                appointmentSql,
+                [appointmentValues],
+                function (error, result) {
+                  tempCon.release();
+                  if (error) {
+                    return reject(error);
+                  }
+                  resolve("Appointment added!");
+                }
+              );
+            }
+          }
+        );
+      }
     });
   });
 }
