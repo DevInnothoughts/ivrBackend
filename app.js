@@ -8,6 +8,7 @@ const appointmentController = require("./src/controllers/appointmentController")
 const noteController = require("./src/controllers/noteController");
 const actionJLRController = require("./src/controllers/actionJLRController");
 const patientController = require("./src/controllers/patientController");
+const uploadCallLogsController = require("./src/controllers/uploadCallLogsController");
 app.use(express.json());
 app.use(cors());
 
@@ -19,6 +20,7 @@ app.use("/ivr/enquiry", enquiryController);
 app.use("/ivr/appointment", appointmentController);
 app.use("/ivr/addNote", noteController);
 app.use("/ivr/actionJLR", actionJLRController);
+app.use("/ivr/uploadCallLogs", uploadCallLogsController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

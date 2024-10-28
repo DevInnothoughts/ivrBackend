@@ -21,6 +21,7 @@ async function getFDEs(location) {
           if (error) {
             return reject(error);
           }
+          console.log(rows);
           resolve(rows);
         }
       );

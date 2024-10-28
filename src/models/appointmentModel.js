@@ -75,10 +75,20 @@ async function addAppointment(appointments) {
         });
       } else {
         console.log("other than new");
-        const sql = `SELECT patient_id FROM patient WHERE phone = ? AND ConfirmPatient = 1 ORDER BY date DESC LIMIT 1`;
+        const sql = `
+                      SELECT patient_id 
+                      FROM patient 
+                      WHERE (phone = ? OR mobile_2 = ?) 
+                        AND ConfirmPatient = 1 
+                      ORDER BY date DESC 
+                      LIMIT 1
+                    `;
         tempCon.query(
           sql,
-          [appointments[0].patient_phone.replace(/^0+/, "")],
+          [
+            appointments[0].patient_phone.replace(/^0+/, ""),
+            appointments[0].patient_phone.replace(/^0+/, ""),
+          ],
           function (error, results) {
             if (error) {
               tempCon.release();
