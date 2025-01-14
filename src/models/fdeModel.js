@@ -3,7 +3,7 @@ const { getConnectionByLocation } = require("../../databaseUtils");
 async function getFDEs(location) {
   const { connection } = getConnectionByLocation(location);
   if (!connection) {
-    const err = new Error("Invalid location");
+    const err = new Error("Invalid location", location);
     err.status = 404;
     throw err;
   }

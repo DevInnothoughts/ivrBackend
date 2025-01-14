@@ -1,4 +1,5 @@
 const { getConnectionByLocation } = require("../../databaseUtils");
+const { addNote } = require("./noteModel");
 
 async function addEnquiry(appointments) {
   const { connection, location } = getConnectionByLocation(
@@ -32,12 +33,24 @@ async function addEnquiry(appointments) {
 
       var sql =
         "INSERT INTO appointment_enquiry (patient_type, enquirytype, patient_name, patient_phone, date, time, patient_location, reference, FDE_Name, note) VALUES ?";
-      tempCon.query(sql, [values], function (error, result) {
+      tempCon.query(sql, [values], async function (error, result) {
         tempCon.release();
         if (error) {
           return reject(error);
         }
-        resolve("Enquiry added!");
+
+        try {
+          // Await the addNote function
+          await addNote(appointments);
+          resolve("Enquiry and note added!");
+        } catch (noteError) {
+          console.error("Failed to add note:", noteError);
+          // Decide how to handle the note error
+          resolve("Enquiry added, but failed to add note!");
+        }
+
+        // addNote(appointments);
+        // resolve("Enquiry added!");
       });
     });
   });

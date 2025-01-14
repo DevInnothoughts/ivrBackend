@@ -9,6 +9,7 @@ const noteController = require("./src/controllers/noteController");
 const actionJLRController = require("./src/controllers/actionJLRController");
 const patientController = require("./src/controllers/patientController");
 const uploadCallLogsController = require("./src/controllers/uploadCallLogsController");
+const callingListController = require("./src/controllers/CallingListController");
 app.use(express.json());
 app.use(cors());
 
@@ -21,6 +22,7 @@ app.use("/ivr/appointment", appointmentController);
 app.use("/ivr/addNote", noteController);
 app.use("/ivr/actionJLR", actionJLRController);
 app.use("/ivr/uploadCallLogs", uploadCallLogsController);
+app.use("/ivr/callingList", callingListController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
