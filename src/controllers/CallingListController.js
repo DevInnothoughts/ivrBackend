@@ -6,6 +6,8 @@ const {
   getSurgeryPatients,
   getMedicationPatients,
   getIPDPatients,
+  getTomorrowsAppointment,
+  getTodaysAppointment,
 } = require("../models/callingListModel");
 
 router.get("/", async (req, res, next) => {
@@ -42,6 +44,26 @@ router.get("/ipd", async (req, res, next) => {
   try {
     console.log(req.query.location);
     const callingList = await getIPDPatients(req.query.location);
+    res.status(200).send(callingList);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/tomorrowAppointments", async (req, res, next) => {
+  try {
+    console.log(req.query.location);
+    const callingList = await getTomorrowsAppointment(req.query.location);
+    res.status(200).send(callingList);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/todaysAppointments", async (req, res, next) => {
+  try {
+    console.log(req.query.location);
+    const callingList = await getTodaysAppointment(req.query.location);
     res.status(200).send(callingList);
   } catch (err) {
     next(err);
