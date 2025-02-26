@@ -247,6 +247,67 @@ async function getMedicationPatients(loc) {
   });
 }
 
+async function getTestPatients(loc) {
+  const { connection, location } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          DATEDIFF(CURDATE(), d.date_diagnosis) AS days_since
+        FROM 
+          diagnosis d
+        LEFT JOIN 
+          patient p
+        ON 
+          d.patient_id = p.patient_id
+        WHERE 
+          DATEDIFF(CURDATE(), d.date_diagnosis) IN (3, 7, 15, 30) -- Fetch specific days only
+          AND d.diagnosisAdvice LIKE '%Test%'
+        ORDER BY 
+          d.patient_id ASC;
+      `;
+
+      tempCon.query(sql, function (error, rows) {
+        tempCon.release();
+        if (error) {
+          return reject(error);
+        }
+
+        // Group the data by `days_since`
+        const groupedData = rows.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        console.log(groupedData); // Log the grouped data
+        resolve(groupedData);
+      });
+    });
+  });
+}
+
 async function getIPDPatients(loc) {
   const { connection, location } = getConnectionByLocation(loc);
   if (!connection) {
@@ -431,6 +492,7 @@ module.exports = {
   getDiagnosisCallingList,
   getSurgeryPatients,
   getMedicationPatients,
+  getTestPatients,
   getIPDPatients,
   getTomorrowsAppointment,
   getTodaysAppointment,
