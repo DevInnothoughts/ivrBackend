@@ -1,6 +1,6 @@
 const { getConnectionByLocation } = require("../../databaseUtils");
 const { getDoctorById } = require("./doctorModel");
-const { addNote } = require("./noteModel");
+const { addNote, addHelplineNote } = require("./noteModel");
 const axios = require("axios");
 
 async function addAppointment(appointments) {
@@ -32,7 +32,7 @@ async function addAppointment(appointments) {
     0,
     patient.patient_phone.replace(/^0+/, ""), // Remove starting "0"
     0,
-    0,
+    null,
     0,
     0,
     location,
@@ -206,6 +206,227 @@ async function addAppointment(appointments) {
                     console.error("Failed to add note:", noteError);
                     // Decide how to handle the note error
                     resolve("Appointment added, but failed to add note!");
+                  }
+                }
+              );
+            }
+          }
+        );
+      }
+    });
+  });
+}
+
+async function addHelplineAppointment(appointments) {
+  const { connection, location } = getConnectionByLocation(
+    appointments[0].patient_location
+  );
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  const values = appointments.map((appointment) => [
+    appointment.doctor_id,
+    appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+    appointment.patient_type,
+    appointment.date,
+    appointment.time,
+    "Pending",
+    location,
+    appointment.FDE_Name,
+    appointment.note,
+  ]);
+
+  const patientValues = appointments.map((patient) => [
+    0,
+    patient.date,
+    patient.patient_name,
+    0,
+    patient.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+    0,
+    0,
+    0,
+    0,
+    location,
+    0,
+  ]);
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(async function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      if (appointments[0].patient_type === "New") {
+        console.log("new");
+        const sql =
+          "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
+        tempCon.query(sql, [patientValues], async function (error, result) {
+          if (error) {
+            tempCon.release();
+            return reject(error);
+          }
+
+          const patientId = result.insertId;
+
+          const appointmentValues = values.map((value) => [
+            patientId,
+            ...value,
+          ]);
+
+          const appointmentSql =
+            "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+          tempCon.query(
+            appointmentSql,
+            [appointmentValues],
+            async function (error, result) {
+              tempCon.release();
+              if (error) {
+                return reject(error);
+              }
+
+              try {
+                // Await the addNote function
+                await addHelplineNote(appointments);
+                console.log("WHATSAPP VALUES PARAMETERS:", values);
+                await sendWhatsAppMsg(
+                  `+91${values[0][1]}`,
+                  values[0][0],
+                  values[0][3],
+                  values[0][4],
+                  location,
+                  values[0][7]
+                );
+                resolve("Helpline Appointment and note added!");
+              } catch (noteError) {
+                console.error("Failed to add Helpline note:", noteError);
+                // You can decide whether to reject or resolve with a warning
+                resolve("Helpline Appointment added, but failed to add note!");
+              }
+            }
+          );
+        });
+      } else {
+        console.log("other than new");
+        const sql = `
+          SELECT patient_id
+          FROM patient
+          WHERE (phone = ? OR mobile_2 = ?)
+            AND ConfirmPatient = 1
+          ORDER BY date DESC
+          LIMIT 1
+        `;
+        tempCon.query(
+          sql,
+          [
+            appointments[0].patient_phone.replace(/^0+/, ""),
+            appointments[0].patient_phone.replace(/^0+/, ""),
+          ],
+          function (error, results) {
+            if (error) {
+              tempCon.release();
+              return reject(error);
+            }
+
+            if (results.length === 0) {
+              // Patient not found, insert into patient table
+              const insertPatientSql =
+                "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
+              tempCon.query(
+                insertPatientSql,
+                [patientValues],
+                async function (error, result) {
+                  if (error) {
+                    tempCon.release();
+                    return reject(error);
+                  }
+
+                  const patientId = result.insertId;
+
+                  const appointmentValues = values.map((value) => {
+                    value[2] = "New"; // Change patient_type to 'New'
+                    return [patientId, ...value];
+                  });
+
+                  const appointmentSql =
+                    "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+                  tempCon.query(
+                    appointmentSql,
+                    [appointmentValues],
+                    async function (error, result) {
+                      tempCon.release();
+                      if (error) {
+                        return reject(error);
+                      }
+
+                      try {
+                        // Await the addNote function
+                        await addHelplineNote(appointments);
+                        console.log("WHATSAPP VALUES PARAMETERS:", values);
+                        await sendWhatsAppMsg(
+                          `+91${values[0][1]}`,
+                          values[0][0],
+                          values[0][3],
+                          values[0][4],
+                          location,
+                          values[0][7]
+                        );
+                        resolve("Helpline Appointment and note added!");
+                      } catch (noteError) {
+                        console.error(
+                          "Failed to add helpline note:",
+                          noteError
+                        );
+                        // Decide how to handle the note error
+                        resolve(
+                          "Helpline Appointment added, but failed to add note!"
+                        );
+                      }
+                    }
+                  );
+                }
+              );
+            } else {
+              // Patient found, use the existing patient ID
+              const patientId = results[0].patient_id;
+
+              const appointmentValues = values.map((value) => [
+                patientId,
+                ...value,
+              ]);
+
+              const appointmentSql =
+                "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+              tempCon.query(
+                appointmentSql,
+                [appointmentValues],
+                async function (error, result) {
+                  tempCon.release();
+                  if (error) {
+                    return reject(error);
+                  }
+
+                  try {
+                    // Await the addNote function
+                    await addHelplineNote(appointments);
+                    console.log("WHATSAPP VALUES PARAMETERS:", values);
+                    await sendWhatsAppMsg(
+                      `+91${values[0][1]}`,
+                      values[0][0],
+                      values[0][3],
+                      values[0][4],
+                      location,
+                      values[0][7]
+                    );
+                    resolve("Helpline Appointment and note added!");
+                  } catch (noteError) {
+                    console.error("Failed to add helpline note:", noteError);
+                    // Decide how to handle the note error
+                    resolve(
+                      "Helpline Appointment added, but failed to add note!"
+                    );
                   }
                 }
               );
@@ -537,4 +758,4 @@ const sendWhatsAppMsg = async (
 //   );
 // }
 
-module.exports = { addAppointment };
+module.exports = { addAppointment, addHelplineAppointment };

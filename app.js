@@ -10,6 +10,8 @@ const actionJLRController = require("./src/controllers/actionJLRController");
 const patientController = require("./src/controllers/patientController");
 const uploadCallLogsController = require("./src/controllers/uploadCallLogsController");
 const callingListController = require("./src/controllers/CallingListController");
+const patientRegFormController = require("./src/controllers/patientRegFormController");
+const leadManagementController = require("./src/controllers/leadManagementController");
 app.use(express.json());
 app.use(cors());
 
@@ -23,6 +25,8 @@ app.use("/ivr/addNote", noteController);
 app.use("/ivr/actionJLR", actionJLRController);
 app.use("/ivr/uploadCallLogs", uploadCallLogsController);
 app.use("/ivr/callingList", callingListController);
+app.use("/ivr/patientRegForm", patientRegFormController);
+app.use("/ivr/leadManagement", leadManagementController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -42,6 +42,47 @@ async function addNote(appointments) {
   });
 }
 
+async function addHelplineNote(appointments) {
+  const { connection } = getConnectionByLocation(
+    appointments[0].patient_location
+  );
+  if (!connection) {
+    const err = new Error("Invalid location", appointments[0].patient_location);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        tempCon.release();
+        return reject(err);
+      }
+
+      var sql = `UPDATE phonecalllogs 
+                 SET note = ?
+                 WHERE timestamp = ? 
+                 `;
+
+      const ivrQueryParams = [
+        appointments[0].note,
+        appointments[0].timestamp,
+        appointments[0].patient_phone,
+      ];
+      console.log(sql, ivrQueryParams);
+      tempCon.query(sql, ivrQueryParams, function (error, result) {
+        tempCon.release();
+        if (error) {
+          console.log("Error while adding note!");
+          return reject(error);
+        }
+        console.log("Helpline Note Added!", result);
+        resolve("Helpline Note added!");
+      });
+    });
+  });
+}
+
 async function addCallingNote(newNote, date, enquiry_id, loc) {
   console.log("Input Parameters:", { newNote, date, enquiry_id, loc });
 
@@ -266,4 +307,5 @@ module.exports = {
   addCallingNote,
   addSurgeryCallingNote,
   addPostOpCallingNote,
+  addHelplineNote,
 };
