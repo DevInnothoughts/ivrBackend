@@ -8,8 +8,8 @@ const {
 router.post("/", async (req, res, next) => {
   try {
     // Add basic validation
-    if (!req.body.uidNo) {
-      return res.status(400).json({ error: "UID is required" });
+    if (!req.body.patient_id) {
+      return res.status(400).json({ error: "Patient ID is required" });
     }
 
     const result = await addPatientRegForm(req.body);
@@ -19,7 +19,7 @@ router.post("/", async (req, res, next) => {
       success: true,
       message: "Patient record updated successfully",
       affectedRows: result.affectedRows,
-      uid: req.body.uidNo,
+      patient_id: req.body.patient_id,
     });
   } catch (err) {
     // Log the error for server-side debugging

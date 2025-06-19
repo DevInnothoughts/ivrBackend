@@ -39,7 +39,7 @@ async function addPatientRegForm(patient) {
   // Prepare values for the UPDATE statement
   const patientValues = {
     prefix: patient.prefix || null,
-    name: patient.name || null, // Uncommented this important field //make it uppercase
+    name: patient.name.toUpperCase() || null, // Uncommented this important field //make it uppercase
     sex: patient.sex || null,
     phone: patient.mobileNo ? patient.mobileNo.replace(/^0+/, "") : null, // Uncommented
     email: patient.email || null,
@@ -69,6 +69,7 @@ async function addPatientRegForm(patient) {
     }),
   };
 
+  console.log("After", patientValues);
   return new Promise((resolve, reject) => {
     connection.getConnection(async function (err, tempCon) {
       if (err) {
@@ -99,7 +100,7 @@ async function addPatientRegForm(patient) {
             patient_location = ?,
             identity = ?,
             additional_info = ?
-          WHERE Uid_no = ?
+          WHERE patient_id = ?
         `;
 
         const values = [
@@ -122,9 +123,10 @@ async function addPatientRegForm(patient) {
           patientValues.patient_location,
           patientValues.identity,
           patientValues.additional_info,
-          patient.uidNo,
+          patient.patient_id,
         ];
 
+        //console.log("Values:", values);
         tempCon.query(sql, values, function (error, result) {
           tempCon.release();
 
@@ -169,7 +171,7 @@ async function verifyPatient(data) {
       }
 
       const sql = `
-        SELECT p.Uid_no, p.name, ap.executivechk
+        SELECT ap.patient_id, p.name, ap.executivechk
         FROM patient p
         JOIN appointment ap ON p.patient_id = ap.patient_id
         WHERE ap.is_deleted != 1 
@@ -219,7 +221,7 @@ async function verifyPatient(data) {
 
         //resolve(results[0]);
         resolve({
-          Uid_no: result.Uid_no,
+          patient_id: result.patient_id,
           name: result.name,
         });
       });
