@@ -2,6 +2,7 @@ const { getConnectionByLocation } = require("../../databaseUtils");
 const { addNote, addHelplineNote } = require("./noteModel");
 
 async function addEnquiry(appointments) {
+  console.log("Adding enquiry for appointments:", appointments[0]);
   const { connection, location } = getConnectionByLocation(
     appointments[0].patient_location
   );
@@ -15,7 +16,7 @@ async function addEnquiry(appointments) {
     appointment.patient_type,
     appointment.enquirytype,
     appointment.patient_name,
-    appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0",
+    appointment.patient_phone.replace(/^(\+91|91|0)+/, ""), // Remove starting "0",
     appointment.date,
     appointment.time,
     location,

@@ -145,6 +145,18 @@ async function getLeads(location) {
           LIMIT 100
         `;
       }
+      if (location === "Thane") {
+        query = `
+          SELECT *
+          FROM appointments 
+          WHERE (
+            selected_area LIKE CONCAT('%', ?) 
+            OR selected_area LIKE CONCAT('%', 'Kapurbawdi', '%')
+          )
+          ORDER BY appointment_id DESC
+          LIMIT 100
+        `;
+      }
 
       tempCon.query(query, queryParams, function (error, rows) {
         tempCon.release();
@@ -161,7 +173,7 @@ async function getLeads(location) {
   });
 }
 
-async function updateStatus(id, status) {
+async function updateStatus(id, status, note) {
   const { connection } = getConnectionByLocation("lead");
   if (!connection) {
     const err = new Error("Invalid location");
@@ -177,11 +189,11 @@ async function updateStatus(id, status) {
 
       const query = `
         UPDATE appointments
-        SET status = ?
+        SET status = ?, note = ?
         WHERE appointment_id = ?
       `;
 
-      tempCon.query(query, [status, id], function (error, rows) {
+      tempCon.query(query, [status, note, id], function (error, rows) {
         tempCon.release();
         if (error) {
           return reject(error);
@@ -193,4 +205,235 @@ async function updateStatus(id, status) {
   });
 }
 
-module.exports = { getLeads, updateStatus };
+async function getChatBotLeads(location) {
+  const { connection } = getConnectionByLocation("lead");
+  if (!connection) {
+    const err = new Error("Invalid location", location);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) return reject(err);
+
+      let query = `
+        SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+        FROM chatbot_leads 
+        WHERE (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%'))
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      let queryParams = [location, location];
+
+      if (location === "DP Road") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Tilak Road%' OR chat_whatsapp_branch LIKE '%Tilak Road%')
+            OR (branch LIKE '%Dhole Patil Road%' OR chat_whatsapp_branch LIKE '%Dhole Patil Road%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Salunke Vihar") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Salunkhe Vihar%' OR chat_whatsapp_branch LIKE '%Salunke Vihar%') 
+            OR (branch LIKE '%Wanowrie%' OR chat_whatsapp_branch LIKE '%Wanowrie%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Hinjewadi") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Hinjawadi%' OR chat_whatsapp_branch LIKE '%Hinjawadi%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "HSR") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%HSR Layout%' OR chat_whatsapp_branch LIKE '%HSR Layout%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Rajaji Nagar") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Rajajinagar%' OR chat_whatsapp_branch LIKE '%Rajajinagar%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Belgavi") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Belagavi%' OR chat_whatsapp_branch LIKE '%Belagavi%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Hyderabad") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Jubilee Hills%' OR chat_whatsapp_branch LIKE '%Jubilee Hills%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Gurgaon Sector 14") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Gurugram - Sector 14%' OR chat_whatsapp_branch LIKE '%Gurugram - Sector 14%')
+             OR (branch LIKE '%Gurgaon Sector - 14%' OR chat_whatsapp_branch LIKE '%Gurgaon Sector - 14%')
+            
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Gurgaon Sector 49") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Gurugram - Sector 49%' OR chat_whatsapp_branch LIKE '%Gurugram - Sector 49%')
+             OR (branch LIKE '%Gurgaon Sector - 49%' OR chat_whatsapp_branch LIKE '%Gurgaon Sector - 49%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      if (location === "Chinchwad") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch LIKE '%Pimpri-Chinchwad%' OR chat_whatsapp_branch LIKE '%Pimpri-Chinchwad%')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+      if (location === "Vashi") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno, disease, chat_whatsapp_branch, query AS message, status, note
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
+            OR (branch = '' AND chat_whatsapp_branch = '')
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, location];
+      }
+
+      tempCon.query(query, queryParams, function (error, rows) {
+        tempCon.release();
+        if (error) return reject(error);
+        rows.forEach((row) => {
+          if (
+            location === "Vashi" &&
+            row.branch === "" &&
+            row.chat_whatsapp_branch === ""
+          ) {
+            row.message = `OTHER BRANCH -${row.message}`;
+          }
+          row.selected_area = location;
+        });
+        console.log(rows);
+        resolve(rows);
+      });
+    });
+  });
+}
+
+async function updateStatusBot(id, status, note) {
+  const { connection } = getConnectionByLocation("lead");
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const query = `
+        UPDATE chatbot_leads
+        SET status = ?, note=?
+        WHERE id = ?
+      `;
+
+      tempCon.query(query, [status, note, id], function (error, rows) {
+        tempCon.release();
+        if (error) {
+          return reject(error);
+        }
+        console.log(rows);
+        resolve(rows);
+      });
+    });
+  });
+}
+
+module.exports = { getLeads, updateStatus, getChatBotLeads, updateStatusBot };

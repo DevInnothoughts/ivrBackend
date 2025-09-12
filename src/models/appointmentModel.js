@@ -15,7 +15,8 @@ async function addAppointment(appointments) {
 
   const values = appointments.map((appointment) => [
     appointment.doctor_id,
-    appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+    appointment.patient_phone.replace(/^(\+91|91|0)+/, ""),
+    //appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0"
     appointment.patient_type,
     appointment.date,
     appointment.time,
@@ -30,7 +31,8 @@ async function addAppointment(appointments) {
     patient.date,
     patient.patient_name,
     0,
-    patient.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+    patient.patient_phone.replace(/^(\+91|91|0)+/, ""),
+    //patient.patient_phone.replace(/^0+/, ""), // Remove starting "0"
     0,
     null,
     0,
@@ -107,8 +109,8 @@ async function addAppointment(appointments) {
         tempCon.query(
           sql,
           [
-            appointments[0].patient_phone.replace(/^0+/, ""),
-            appointments[0].patient_phone.replace(/^0+/, ""),
+            appointments[0].patient_phone.replace(/^(\+91|91|0)+/, ""),
+            appointments[0].patient_phone.replace(/^(\+91|91|0)+/, ""),
           ],
           function (error, results) {
             if (error) {
@@ -446,11 +448,11 @@ const sendWhatsAppMsg = async (
   branchLocation,
   fdName
 ) => {
-  const doctor = await getDoctorById(branchLocation, branchDoctor);
+  // const doctor = await getDoctorById(branchLocation, branchDoctor);
 
-  if (!doctor) return false;
-  const doctorName = doctor[0].name;
-  console.log(doctorName);
+  // if (!doctor) return false;
+  // const doctorName = doctor[0].name;
+  //console.log(doctorName);
   // Define the start and end time
   const startTime = new Date(`1970-01-01T${appoTime}:00`).toLocaleTimeString(
     [],
@@ -470,67 +472,66 @@ const sendWhatsAppMsg = async (
   switch (branchLocation) {
     case "DP Road":
       branchaddress =
-        "Ground Floor, Millenium Star Extension, Adjacent to Ruby Hall Entrance Gate, Dhole Patil Road, Pune, Maharashtra 411001";
+        "Ground Floor, Millenium Star Extension, Dhole Patil Road, Pune";
       helpline = "8888288884";
       googlemap = "https://goo.gl/maps/5hV85GqaVfSCRejC7";
       break;
     case "Tilak Road":
-      branchaddress =
-        "Mangalmurti Complex, 105, First floor, Near Hirabaug, Tilak Road,Pune - 411002";
+      branchaddress = "Mangalmurti Complex, 105, Tilak Road, Pune";
       helpline = "8888288884";
       googlemap = "https://maps.app.goo.gl/ZLiwZr5aLUwU8XdPA";
       break;
     case "Salunkhe-Vihar":
-      branchaddress =
-        "101/102 Girme Towers, Salunkhe Vihar Road,Next to HDFC Bank, Opp. Kotak Mahindra Bank,Oxford Village, Kedari Nagar, Wanowrie,Pune, Maharashtra 411004";
+    case "Salunke Vihar":
+      branchaddress = "101/102 Girme Towers, Wanowrie, Pune";
       helpline = "8888522226";
       googlemap = "https://maps.app.goo.gl/cnDzyEFSiDBqVxXs8";
       break;
     case "Baner":
-      branchaddress =
-        "1st floor, Crystal Empire Building, Opposite Hotel Sadanand, Next to Amar Business Park, Baner Road, Pune, Maharashtra 411045";
+      branchaddress = "1st floor, Crystal Empire Building, Baner, Pune";
       helpline = "8888622221";
       googlemap = "https://goo.gl/maps/7yBP3kPn2C9jtNwz6";
       break;
     case "Pimpri-Chinchwad":
-      branchaddress =
-        "Second floor, Premier Plaza,Near Big Bazar & Big Cinema,Above Mac Donald, Chinchwad, Pune - 411019";
+    case "Chinchwad":
+      branchaddress = "Second floor, Premier Plaza, Chinchwad, Pune";
       helpline = "8888200004";
       googlemap = "https://maps.app.goo.gl/wXetuZV9sFqxhebn7";
       break;
     case "Chakan":
-      branchaddress =
-        "1st Floor,Gokul Complex,Near HDFC Bank, Wage Vasti Nashik Road, Chakan, Pune -410501 Tal : Khed , Dist: Pune";
+      branchaddress = "1st Floor, Gokul Complex, Chakan, Pune";
       helpline = "8888596666";
       googlemap = "https://goo.gl/maps/cNdvDPK2sqTM9Rwp9";
       break;
     case "Dighi":
-      branchaddress =
-        "Sr No.123, Amrutdhara Commercial Hub,Alandi Rd, next to Sai Mandir, Wadmukhwadi,Charholi Budruk, Pune, Maharashtra 412105.";
+      branchaddress = "Amrutdhara Commercial Hub, Charholi Budruk, Pune";
       helpline = "8483999588";
       googlemap = "https://maps.app.goo.gl/9wNEDTMtG3qwtsYLA";
       break;
-    case "Undri":
+    case "Katraj":
       branchaddress =
-        "2nd floor 220, Healing hands clinic,Marvel sangria, NIBM Rd, Mohammed Wadi,Pune, Maharashtra 411060";
+        "Ground Floor, Atmosphere Building, Ambegaon Budruk, Pune";
+      helpline = "9175235343";
+      googlemap = "";
+      break;
+    case "Undri":
+      branchaddress = "220, Marvel sangria, Mohammed Wadi, Pune";
       helpline = "8888522226";
       googlemap = "https://maps.app.goo.gl/YPi5Fd455tjsTRLP6";
       break;
     case "Hinjewadi":
-      branchaddress =
-        "Healing Hands Clinic, AH Infotech,3rd Floor,Above. SBI MIDC Hinjewadi Branch, Hinjewadi Phase 1 Rd,Hinjawadi, Pune, Maharashtra 411057";
+      branchaddress = "AH Infotech, 3rd Floor, Hinjawadi, Pune";
       helpline = "9175232340";
       googlemap = "https://maps.app.goo.gl/E75SswJ4EJTY9JK27";
       break;
     case "Vashi":
-      branchaddress =
-        "Unit no 18 at Palm Beach Galleria,1st Floor, Palm Beach Road, Vashi,New Mumbai - 400703";
+      branchaddress = "Unit no 18, Palm Beach Galleria, Vashi, New Mumbai";
       helpline = "9175232308";
       googlemap = "";
       break;
     case "Navi-Mumbai":
-      branchaddress =
-        "5, Gahlot Majesty sector 46A,Opp NRI Colony, Palm Beach Road,Navi Mumbai - 400706";
+    case "Navi Mumbai":
+      branchaddress = "Gahlot Majesty, Navi Mumbai";
       helpline = "8888166667";
       googlemap = "https://goo.gl/maps/QV383Zezxs1jWRCu6";
       break;
@@ -541,20 +542,18 @@ const sendWhatsAppMsg = async (
       googlemap = "https://goo.gl/maps/ZHNqt9YcWZg5EXmG6";
       break;
     case "Thane":
-      branchaddress =
-        "Cosmos Jewels, 3rd floor,Ghodbunder Rd, near Dmart,opp. Muchhala College, Parkwoods,Thane West, Thane, Maharashtra 400615";
+      branchaddress = "Cosmos Jewels, 3rd floor, Thane West";
       helpline = "8575999994";
       googlemap = "https://maps.app.goo.gl/tcGBRcV72VmSv4Zq6";
       break;
     case "Andheri":
       branchaddress =
-        "B-3 ,C-4 1st floor, Mayfair Meridien HSG Society, Ceasar Rd, opp. St Blais Church, Amboli, Andheri West, Mumbai, Maharashtra 400058.";
+        "B-3 ,C-4, 1st floor, Mayfair Meridien HSG Society, Andheri West, Mumbai";
       helpline = "9156634201";
       googlemap = "https://goo.gl/maps/PaupXzJFyVpEauG88";
       break;
     case "Nashik":
-      branchaddress =
-        "3rd floor, Above MacDonald Opp. Big Bazaar, College road, Nashik Maharashtra - 422005";
+      branchaddress = "3rd floor, Above MacDonald, Nashik";
       helpline = "8888366662";
       googlemap = "https://goo.gl/maps/FfocHX1R3vK3dqNM7";
       break;
@@ -565,58 +564,98 @@ const sendWhatsAppMsg = async (
       googlemap = "https://goo.gl/maps/MJuBSSbUKzwcphut8";
       break;
     case "Latur":
-      branchaddress =
-        "MG Rd, opp. LDCC Bank, Sawe Wadi, Latur, Maharashtra 413512";
+      branchaddress = "MG Rd, Latur";
       helpline = "8956223459";
       googlemap = "https://goo.gl/maps/m5W9qXUGEAkE1p6BA";
       break;
     case "Lucknow":
-      branchaddress =
-        "L-2/761, Vinay Khand 2, Gomti Nagar, Lucknow, Uttar Pradesh 226010";
+      branchaddress = "L-2/761, Vinay Khand 2, Lucknow";
       helpline = "";
       googlemap = "";
       break;
     case "Bangalore":
-      branchaddress =
-        "Krishna towers, #281,Ground floor,15th Cross Rd, 5th Phase, KR Layout, JP Nagar Phase 6, JP Nagar, Bengaluru, Karnataka - 560078";
+    case "JP Nagar":
+      branchaddress = "Krishna towers, Ground floor, JP Nagar, Bengaluru";
       helpline = "8888133338";
       googlemap = "https://goo.gl/maps/mZye2mYQt9inHV3F8";
       break;
     case "Indiranagar":
-      branchaddress =
-        "3rd Floor Krishvi Aspire, #516,Chinmaya Mission Hospital Rd, opp.Nature's Basket, Indiranagar, Bengaluru, Karnataka 560038";
+      branchaddress = "3rd Floor Krishvi Aspire, Indiranagar, Bengaluru";
       helpline = "8197978641";
       googlemap = "https://goo.gl/maps/9xHENbGGTb4C9guC8";
       break;
     case "Sahakarnagar":
+    case "Sahakar Nagar":
       branchaddress =
-        "1st Floor, 490/8, above McDonalds,F Block, Sahakar Nagar,Byatarayanapura, Bengaluru,Karnataka 560092.";
+        "1st Floor, above McDonalds, F Block, Sahakar Nagar, Bengaluru";
       helpline = "9731118056";
       googlemap = "https://goo.gl/maps/fKx2Z5iRAuEQFugTA";
       break;
     case "Belagavi":
-      branchaddress =
-        "C/O Sbg hospital, Opposite federal bank, Ganeshpur Rd, Laxmi Tek, Belagavi, Karnataka 590001.";
+    case "Belgavi":
+      branchaddress = "C/O Sbg hospital, Belagavi";
       helpline = "8600002156";
       googlemap = "https://maps.app.goo.gl/qnLx7Yc8VZJHeVsa7";
       break;
     case "Hyderabad":
-      branchaddress =
-        "MCH No.8-2-293/82/A/729/1/1F1,1st Floor, DK's  Kavya House Road No.36, Opposite Neeru's Emporio, Madhapur Metro station Piller number 1698, Beside Indian oil petrol pump,Jubilee Hills Main Road, Jubilee Hills,Hyderabad, Telangana";
+      branchaddress = "1st Floor, DK's Kavya House, Jubilee Hills, Hyderabad";
       helpline = "7680862049";
       googlemap = "https://goo.gl/maps/ouqsC1e5AA11EBhR7";
       break;
     case "Ludhiana":
-      branchaddress =
-        "2117/1457, Gobind Nagar, Opp. hotel onn, Near Yes Bank, Ferozepur Road, Ludhiana, Punjab 141001.";
+      branchaddress = "Gobind Nagar, Ludhiana, Punjab";
       helpline = "7986935908";
-      googlemap = "https://goo.gl/maps/B6GboeLp3bWrLn2U7";
+      googlemap = "https://goo.gl/maps/B6GboeLp3bWrLnGU9";
       break;
-    case "Delhi":
+    case "Surat":
+      branchaddress = "Third Floor, VIP Plaza, Surat";
+      helpline = "7436008844";
+      googlemap = "https://goo.gl/maps/jZ9cCPBqwP43x6Q58";
+      break;
+    case "Gurgaon-49":
+    case "Gurgaon Sector 49":
       branchaddress =
-        "3rd floor, Building No- 2, Above Noida Meat Shop, Sector 110 Noida, Delhi NCR";
-      helpline = "9152655877";
-      googlemap = "https://goo.gl/maps/CfcA1JeYY41wrUhu9";
+        "Spaze ITech Park, Tower C, Ground Floor, Sector 49, Gurugram";
+      helpline = "9990479800";
+      googlemap = "https://maps.app.goo.gl/iS8WboxRXfR8TF8BA";
+      break;
+    case "Gurgaon-14":
+    case "Gurgaon Sector 14":
+      branchaddress = "1st Floor, Sheetla Chamber, Sector 14, Gurugram";
+      helpline = "9990473800";
+      googlemap = "https://maps.app.goo.gl/yCXnMS373kSmS54HA";
+      break;
+    case "Kalaburagi":
+      branchaddress = "Shanta hospital, 4 th floor, Kalaburagi";
+      helpline = "9164045999";
+      googlemap = "";
+      break;
+    case "HSR":
+      branchaddress = "1st Floor, Krishna Complex, HSR Layout, Bengaluru";
+      helpline = "8792950455";
+      googlemap = "";
+      break;
+    case "Rajajinagar":
+    case "Rajaji Nagar":
+      branchaddress = "2nd floor, above HDFC Bank, Rajajinagar, Bengaluru";
+      helpline = "7996126669";
+      googlemap = "";
+      break;
+    case "Sarjapura":
+      branchaddress = "Trinity Complex, Sarjapura, Bengaluru";
+      helpline = "9036053501";
+      googlemap = "";
+      break;
+    case "Mysore":
+      branchaddress = "1st and 2nd Floor, Scarlet Towers, Mysore";
+      helpline = "8971928968";
+      googlemap = "https://g.co/kgs/qNo5GKP";
+      break;
+    case "Secunderabad":
+      branchaddress =
+        "1st floor, Chandragiri Colony, Tirumalgiri, Secunderabad";
+      helpline = "8977520083";
+      googlemap = "https://g.co/kgs/ZCihPnZ";
       break;
     default:
       branchaddress = "Location not found.";
@@ -628,10 +667,9 @@ const sendWhatsAppMsg = async (
   // Prepare data to send in the API request
   const data = {
     broadcast_name: "appointment_msg",
-    template_name: "appointment_msg_1",
+    template_name: "appt_confirmation_final2",
     parameters: [
       { name: "address", value: branchaddress },
-      { name: "doctor_name", value: doctorName },
       { name: "appointment_date", value: appoDate },
       { name: "appointment_time", value: timeRange },
       { name: "helpline", value: helpline },

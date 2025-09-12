@@ -47,6 +47,7 @@ const getConnectionByLocation = (loc) => {
     case "Hyderabad Helpline":
     case "Hyderabad":
     case "Hyderabad 2":
+    case "Hyderabad - JJ":
       connection = conHyderabad;
       location = "Hyderabad";
       break;
@@ -57,6 +58,9 @@ const getConnectionByLocation = (loc) => {
     case "DP Road 3":
     case "Swargate":
     case "Swargate 3":
+    case "Pune station 1":
+    case "Pune station 2":
+    case "Pune Station 3":
       connection = conDP;
       location = "DP Road";
       break;
@@ -89,7 +93,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Thane":
-    case "Thane 2":
+    case "Thane - SK":
     case "Thane - New":
       connection = conThane;
       location = "Thane";
@@ -104,12 +108,15 @@ const getConnectionByLocation = (loc) => {
 
     case "HSR Layout":
     case "HSR":
+    case "HSR Layout - NS":
       connection = conHSR;
       location = "HSR";
       break;
 
     case "JP Nagar":
     case "Bangalore JP Nagar 2":
+    case "JP Nagar 2":
+    case "Bangalore JP Nagar":
       connection = conBangalore;
       location = "Bangalore";
       break;
@@ -118,6 +125,7 @@ const getConnectionByLocation = (loc) => {
     case "Navi Mumbai 2":
     case "Navi Mumbai 3":
     case "NM - New":
+    case "NM - New 2":
       connection = conNM;
       location = "Navi-Mumbai";
       break;
@@ -137,6 +145,7 @@ const getConnectionByLocation = (loc) => {
 
     case "Salunke Vihar":
     case "Salunke Vihar 2":
+    case "Wanowrie":
       connection = conSV;
       location = "Salunkhe-Vihar";
       break;
@@ -171,12 +180,14 @@ const getConnectionByLocation = (loc) => {
     case "Andheri  2":
     case "Andheri 2":
     case "Andheri - New":
+    case "Andheri - New 2":
       connection = conAndheri;
       location = "Andheri";
       break;
 
     case "Sahakar Nagar":
     case "Sahakar nagar 2":
+    case "Sahakar Nagar - NK":
       connection = conSahakarnagar;
       location = "Sahakarnagar";
 
@@ -188,6 +199,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Gurgaon Sector 49":
+    case "Gurgaon Sector 49 - 2":
       connection = conGurgaon49;
       location = "Gurgaon-49";
       break;
@@ -221,6 +233,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Vashi":
+    case "Vashi - MI":
       connection = conVashi;
       location = "Vashi";
       break;
@@ -243,11 +256,13 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Rajaji Nagar":
+    case "Rajaji Nagar 2":
       connection = conRajajiNagar;
       location = "Rajajinagar";
       break;
 
     case "Sarjapura":
+    case "Sarjapura 2":
       connection = conSarjapura;
       location = "Sarjapura";
       break;
