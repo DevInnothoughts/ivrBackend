@@ -3,6 +3,38 @@ const { getDoctorById } = require("./doctorModel");
 const { addNote, addHelplineNote } = require("./noteModel");
 const axios = require("axios");
 
+function normalizeIndianPhone(phone) {
+  if (!phone && phone !== 0) return null;
+  // keep only digits
+  const digits = String(phone).replace(/\D/g, "");
+
+  if (digits.length === 10) return digits;
+  if (digits.length > 10) {
+    // keep last 10 digits (strip country/leading zeros/prefixes)
+    return digits.slice(-10);
+  }
+  // too short or invalid
+  return null;
+}
+
+function getConnectionPromise(pool) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, con) => {
+      if (err) return reject(err);
+      resolve(con);
+    });
+  });
+}
+
+function queryPromise(con, sql, params) {
+  return new Promise((resolve, reject) => {
+    con.query(sql, params, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
+  });
+}
+
 async function addAppointment(appointments) {
   const { connection, location } = getConnectionByLocation(
     appointments[0].patient_location
@@ -217,6 +249,503 @@ async function addAppointment(appointments) {
       }
     });
   });
+}
+
+// async function addAppointmentV1(appointments) {
+//   const { connection: locationDB, location } =
+//     getConnectionByLocation(patientLocation);
+
+//   const { connection: masterDB } = getConnectionByLocation("Lead"); // Master DB
+//   if (!locationDB || !masterDB) {
+//     const err = new Error("Invalid location");
+//     err.status = 404;
+//     throw err;
+//   }
+
+//   const values = appointments.map((appointment) => [
+//     appointment.doctor_id,
+//     appointment.patient_phone.replace(/^(\+91|91|0)+/, ""),
+//     //appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+//     appointment.patient_type,
+//     appointment.date,
+//     appointment.time,
+//     "Pending",
+//     location,
+//     appointment.FDE_Name,
+//     appointment.note,
+//   ]);
+
+//   const patientValues = appointments.map((patient) => [
+//     0,
+//     patient.date,
+//     patient.patient_name,
+//     0,
+//     patient.patient_phone.replace(/^(\+91|91|0)+/, ""),
+//     //patient.patient_phone.replace(/^0+/, ""), // Remove starting "0"
+//     0,
+//     null,
+//     0,
+//     0,
+//     location,
+//     0,
+//   ]);
+
+//   return new Promise((resolve, reject) => {
+//     masterDB.getConnection(async function (err, masterCon) {
+//       if (err) {
+//         return reject(err);
+//       }
+
+//       if (appointments[0].patient_type === "New") {
+//         console.log("new");
+
+//         // 1️⃣ INSERT INTO MASTER PATIENT TABLE FIRST
+//         const masterSql = `
+//     INSERT INTO patientsMasterData
+//     (name, date, phone, mobile_2, location)
+//     VALUES (?, ?, ?, ?, ?)
+//   `;
+
+//         const cleanedPhone = normalizeIndianPhone(
+//           appointments[0].patient_phone
+//         );
+
+//         const masterValues = [
+//           appointments[0].patient_name,
+//           appointments[0].date,
+//           cleanedPhone,
+//           null,
+//           location,
+//         ];
+
+//         masterCon.query(masterSql, masterValues, function (error, masterRes) {
+//           if (error) {
+//             tempCon.release();
+//             return reject(error);
+//           }
+
+//           const globalId = masterRes.insertId; // 🔥 new global id
+
+//           console.log("New Global ID:", globalId);
+
+//           // 2️⃣ INSERT INTO OLD PATIENT TABLE AFTER GETTING GLOBAL ID
+//           const sql = `
+//             INSERT INTO patient
+//             (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient, global_id)
+//             VALUES ?
+//           `;
+
+//           // Add global_id inside your patientValues
+//           const patientValuesWithGlobal = appointments.map((patient) => [
+//             0,
+//             patient.date,
+//             patient.patient_name,
+//             0,
+//             cleanedPhone,
+//             0,
+//             null,
+//             0,
+//             0,
+//             location,
+//             0,
+//             globalId, // 🔥 new global id added here
+//           ]);
+
+//           console.log(
+//             "Patient Values with Global ID:",
+//             patientValuesWithGlobal
+//           );
+
+//           tempCon.query(
+//             sql,
+//             [patientValuesWithGlobal],
+//             async function (error, result) {
+//               if (error) {
+//                 tempCon.release();
+//                 return reject(error);
+//               }
+
+//               const patientId = result.insertId;
+
+//               const appointmentValues = values.map((value) => [
+//                 patientId,
+//                 ...value,
+//               ]);
+
+//               const appointmentSql =
+//                 "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+
+//               tempCon.query(
+//                 appointmentSql,
+//                 [appointmentValues],
+//                 async function (error, result) {
+//                   tempCon.release();
+//                   if (error) return reject(error);
+
+//                   try {
+//                     await addNote(appointments);
+
+//                     await sendWhatsAppMsg(
+//                       `+91${values[0][1]}`,
+//                       values[0][0],
+//                       values[0][3],
+//                       values[0][4],
+//                       location,
+//                       values[0][7]
+//                     );
+
+//                     resolve(
+//                       "Master patient, patient record & appointment added!"
+//                     );
+//                   } catch (noteError) {
+//                     resolve("Master + patient added, but failed to add note!");
+//                   }
+//                 }
+//               );
+//             }
+//           );
+//         });
+//       } else {
+//         console.log("other than new");
+//         const sql = `
+//           SELECT patient_id
+//           FROM patient
+//           WHERE (phone = ? OR mobile_2 = ?)
+//             AND ConfirmPatient = 1
+//           ORDER BY date DESC
+//           LIMIT 1
+//         `;
+//         tempCon.query(
+//           sql,
+//           [
+//             appointments[0].patient_phone.replace(/^(\+91|91|0)+/, ""),
+//             appointments[0].patient_phone.replace(/^(\+91|91|0)+/, ""),
+//           ],
+//           function (error, results) {
+//             if (error) {
+//               tempCon.release();
+//               return reject(error);
+//             }
+
+//             if (results.length === 0) {
+//               // Patient not found, insert into patient table
+//               const insertPatientSql =
+//                 "INSERT INTO patient (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient) VALUES ?";
+//               tempCon.query(
+//                 insertPatientSql,
+//                 [patientValues],
+//                 async function (error, result) {
+//                   if (error) {
+//                     tempCon.release();
+//                     return reject(error);
+//                   }
+
+//                   const patientId = result.insertId;
+
+//                   const appointmentValues = values.map((value) => {
+//                     value[2] = "New"; // Change patient_type to 'New'
+//                     return [patientId, ...value];
+//                   });
+
+//                   const appointmentSql =
+//                     "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+//                   tempCon.query(
+//                     appointmentSql,
+//                     [appointmentValues],
+//                     async function (error, result) {
+//                       tempCon.release();
+//                       if (error) {
+//                         return reject(error);
+//                       }
+
+//                       try {
+//                         // Await the addNote function
+//                         await addNote(appointments);
+//                         console.log("WHATSAPP VALUES PARAMETERS:", values);
+//                         await sendWhatsAppMsg(
+//                           `+91${values[0][1]}`,
+//                           values[0][0],
+//                           values[0][3],
+//                           values[0][4],
+//                           location,
+//                           values[0][7]
+//                         );
+//                         resolve("Appointment and note added!");
+//                       } catch (noteError) {
+//                         console.error("Failed to add note:", noteError);
+//                         // Decide how to handle the note error
+//                         resolve("Appointment added, but failed to add note!");
+//                       }
+//                     }
+//                   );
+//                 }
+//               );
+//             } else {
+//               // Patient found, use the existing patient ID
+//               const patientId = results[0].patient_id;
+
+//               const appointmentValues = values.map((value) => [
+//                 patientId,
+//                 ...value,
+//               ]);
+
+//               const appointmentSql =
+//                 "INSERT INTO appointment (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note) VALUES ?";
+//               tempCon.query(
+//                 appointmentSql,
+//                 [appointmentValues],
+//                 async function (error, result) {
+//                   tempCon.release();
+//                   if (error) {
+//                     return reject(error);
+//                   }
+
+//                   try {
+//                     // Await the addNote function
+//                     await addNote(appointments);
+//                     console.log("WHATSAPP VALUES PARAMETERS:", values);
+//                     await sendWhatsAppMsg(
+//                       `+91${values[0][1]}`,
+//                       values[0][0],
+//                       values[0][3],
+//                       values[0][4],
+//                       location,
+//                       values[0][7]
+//                     );
+//                     resolve("Appointment and note added!");
+//                   } catch (noteError) {
+//                     console.error("Failed to add note:", noteError);
+//                     // Decide how to handle the note error
+//                     resolve("Appointment added, but failed to add note!");
+//                   }
+//                 }
+//               );
+//             }
+//           }
+//         );
+//       }
+//     });
+//   });
+// }
+
+async function addAppointmentV1(appointments) {
+  if (!appointments || appointments.length === 0) {
+    throw new Error("Invalid appointment data");
+  }
+
+  const appt = appointments[0];
+  //console.log("Appointment Data:", appt);
+  const patientLocation = appt.patient_location;
+
+  //--------------------------------
+  // 1️⃣ GET DB CONNECTIONS
+  //--------------------------------
+  const { connection: locationDB, location } =
+    getConnectionByLocation(patientLocation);
+  const { connection: masterDB } = getConnectionByLocation("lead");
+
+  if (!locationDB || !masterDB) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  //--------------------------------
+  // 2️⃣ CLEAN PHONE NUMBER
+  //--------------------------------
+  const cleanedPhone = normalizeIndianPhone(appt.patient_phone);
+
+  //--------------------------------
+  // 3️⃣ PREPARE VALUES
+  //--------------------------------
+  const appointmentValues = appointments.map((a) => [
+    a.doctor_id,
+    cleanedPhone,
+    a.patient_type,
+    a.date,
+    a.time,
+    "Pending",
+    location,
+    a.FDE_Name,
+    a.note,
+  ]);
+
+  //--------------------------------
+  // 4️⃣ GET A LOCATION DB CONNECTION
+  //--------------------------------
+  const locCon = await getConnectionPromise(locationDB);
+  const masterCon = await getConnectionPromise(masterDB);
+
+  try {
+    //----------------------------------------
+    // CASE 1️⃣ — NEW PATIENT
+    //----------------------------------------
+    if (appt.patient_type === "New") {
+      console.log("Creating NEW patient...");
+
+      // Insert into MASTER
+      const masterSql = `
+        INSERT INTO patientsMasterData (name, date, phone, mobile_2, location)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      const masterRes = await queryPromise(masterCon, masterSql, [
+        appt.patient_name,
+        appt.date,
+        cleanedPhone,
+        null,
+        location,
+      ]);
+
+      const globalId = masterRes.insertId;
+      console.log("Global Master ID:", globalId);
+
+      //-----------------------------
+      // Insert into PATIENT table
+      //-----------------------------
+      const patientSql = `
+        INSERT INTO patient
+        (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient, global_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const patientRes = await queryPromise(locCon, patientSql, [
+        0,
+        appt.date,
+        appt.patient_name,
+        0,
+        cleanedPhone,
+        0,
+        null,
+        0,
+        0,
+        location,
+        0,
+        globalId,
+      ]);
+
+      const patientId = patientRes.insertId;
+
+      //-----------------------------
+      // Insert into APPOINTMENTS
+      //-----------------------------
+      const apptSql = `
+        INSERT INTO appointment
+        (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note)
+        VALUES ?
+      `;
+
+      const wrappedAppointments = appointmentValues.map((v) => [
+        patientId,
+        ...v,
+      ]);
+
+      await queryPromise(locCon, apptSql, [wrappedAppointments]);
+
+      //------------------------------------
+      // Add note + WhatsApp message
+      //------------------------------------
+      await addNote(appointments);
+
+      await sendWhatsAppMsg(
+        `+91${cleanedPhone}`,
+        appt.doctor_id,
+        appt.date,
+        appt.time,
+        location,
+        appt.FDE_Name
+      );
+
+      return "New patient + appointment created successfully!";
+    }
+
+    //----------------------------------------
+    // CASE 2️⃣ — EXISTING PATIENT
+    //----------------------------------------
+    console.log("EXISTING patient flow");
+
+    const findSql = `
+      SELECT patient_id
+      FROM patient
+      WHERE (phone = ? OR mobile_2 = ?)
+        AND ConfirmPatient = 1
+      ORDER BY date DESC
+      LIMIT 1
+    `;
+
+    const existing = await queryPromise(locCon, findSql, [
+      cleanedPhone,
+      cleanedPhone,
+    ]);
+
+    let patientId;
+
+    if (existing.length > 0) {
+      patientId = existing[0].patient_id;
+    } else {
+      //------------------------------------------
+      // Patient not found → Insert as NEW
+      //------------------------------------------
+      const newPatientSql = `
+        INSERT INTO patient
+        (Uid_no, date, name, sex, phone, age, reference_type, address, registration_id, patient_location, ConfirmPatient)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const patientRes = await queryPromise(locCon, newPatientSql, [
+        0,
+        appt.date,
+        appt.patient_name,
+        0,
+        cleanedPhone,
+        0,
+        null,
+        0,
+        0,
+        location,
+        0,
+      ]);
+
+      patientId = patientRes.insertId;
+
+      // Set patient type to New
+      appointmentValues.forEach((v) => (v[2] = "New"));
+    }
+
+    //------------------------------------------
+    // Insert Appointment
+    //------------------------------------------
+    const apptSql = `
+      INSERT INTO appointment
+      (patient_id, doctor_id, patient_phone, patient_type, appointment_timestamp, appointment_time, status, patient_location, FDE_Name, note)
+      VALUES ?
+    `;
+
+    const wrapped = appointmentValues.map((v) => [patientId, ...v]);
+
+    await queryPromise(locCon, apptSql, [wrapped]);
+
+    //------------------------------------
+    // Add Note + WhatsApp
+    //------------------------------------
+    await addNote(appointments);
+
+    await sendWhatsAppMsg(
+      `+91${cleanedPhone}`,
+      appt.doctor_id,
+      appt.date,
+      appt.time,
+      location,
+      appt.FDE_Name
+    );
+
+    return "Existing patient appointment created successfully!";
+  } catch (err) {
+    throw err;
+  } finally {
+    locCon.release();
+    masterCon.release();
+  }
 }
 
 async function addHelplineAppointment(appointments) {
@@ -796,4 +1325,4 @@ const sendWhatsAppMsg = async (
 //   );
 // }
 
-module.exports = { addAppointment, addHelplineAppointment };
+module.exports = { addAppointment, addHelplineAppointment, addAppointmentV1 };

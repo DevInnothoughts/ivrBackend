@@ -3,11 +3,12 @@ var router = express.Router();
 const {
   addAppointment,
   addHelplineAppointment,
+  addAppointmentV1,
 } = require("../models/appointmentModel");
 
 router.post("/", async (req, res, next) => {
   try {
-    const result = await addAppointment(req.body);
+    const result = await addAppointmentV1(req.body);
     res.status(200).send(result);
   } catch (err) {
     next(err);

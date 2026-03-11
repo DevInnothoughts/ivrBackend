@@ -197,7 +197,7 @@ async function verifyPatient(data) {
           console.error("Database error:", error);
           return reject(error);
         }
-
+        console.log(results);
         if (results.length === 0) {
           const notFoundError = new Error(
             "No appointment found for today with this mobile number"

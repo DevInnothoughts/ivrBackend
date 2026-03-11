@@ -37,6 +37,10 @@ const conRajajiNagar = createPool("hmsRajajinagarDB");
 const conSarjapura = createPool("hmsSarjapuraDB");
 const conKatraj = createPool("hmsKatrajDB");
 const conLead = createPool("hhc_appointments");
+const conAhmedabad = createPool("hmsAhmedabadDB");
+const conMohali = createPool("hmsMohaliDB");
+const conAurangabad = createPool("hmsAurangabadDB");
+const conWhitefield = createPool("hmsWhitefieldDB");
 
 const getConnectionByLocation = (loc) => {
   console.log("Get Connection Of:", loc);
@@ -239,6 +243,8 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Hinjewadi":
+    case "Hinjewadi 1":
+    case "Hinjewadi 2":
       connection = conHinjewadi;
       location = "Hinjewadi";
       break;
@@ -275,6 +281,26 @@ const getConnectionByLocation = (loc) => {
     case "lead":
       connection = conLead;
       location = "Lead";
+      break;
+
+    case "Ahmedabad":
+      connection = conAhmedabad;
+      location = "Ahmedabad";
+      break;
+
+    case "Mohali":
+      connection = conMohali;
+      location = "Mohali";
+      break;
+
+    case "Aurangabad":
+      connection = conAurangabad;
+      location = "Aurangabad";
+      break;
+
+    case "Whitefield":
+      connection = conWhitefield;
+      location = "Whitefield";
       break;
 
     default:

@@ -64,11 +64,7 @@ async function addHelplineNote(appointments) {
                  WHERE timestamp = ? 
                  `;
 
-      const ivrQueryParams = [
-        appointments[0].note,
-        appointments[0].timestamp,
-        appointments[0].patient_phone,
-      ];
+      const ivrQueryParams = [appointments[0].note, appointments[0].timestamp];
       console.log(sql, ivrQueryParams);
       tempCon.query(sql, ivrQueryParams, function (error, result) {
         tempCon.release();

@@ -394,6 +394,7 @@ async function getTomorrowsAppointment(loc) {
           ap.patient_type,
           ap.appointment_timestamp,
           ap.appointment_time,
+          ap.confirm_time,
           ap.FDE_Name,
           ap.note,
           d.name AS doctor_name,
@@ -419,7 +420,7 @@ async function getTomorrowsAppointment(loc) {
             return reject(error);
           }
 
-          console.log(rows); // Log the fetched appointments
+          // console.log(rows); // Log the fetched appointments
           resolve(rows);
         }
       );
@@ -453,6 +454,7 @@ async function getTodaysAppointment(loc) {
           ap.patient_type,
           ap.appointment_timestamp,
           ap.appointment_time,
+          ap.confirm_time,
           ap.FDE_Name,
           ap.note,
           d.name AS doctor_name,
@@ -479,7 +481,7 @@ async function getTodaysAppointment(loc) {
             return reject(error);
           }
 
-          console.log(rows); // Log the fetched appointments
+          //console.log(rows); // Log the fetched appointments
           resolve(rows);
         }
       );

@@ -1,10 +1,26 @@
 var express = require("express");
 var router = express.Router();
-const { uploadCallLogs } = require("../models/uploadCallLogsModel");
+const {
+  uploadCallLogs,
+  uploadDoctorsCallLogs,
+} = require("../models/uploadCallLogsModel");
 
 router.post("/", async (req, res, next) => {
   try {
     const result = await uploadCallLogs(
+      req.query.location,
+      req.query.mobile,
+      req.body
+    );
+    res.status(200).send(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/doctor", async (req, res, next) => {
+  try {
+    const result = await uploadDoctorsCallLogs(
       req.query.location,
       req.query.mobile,
       req.body
