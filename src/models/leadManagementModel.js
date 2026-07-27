@@ -44,6 +44,7 @@ async function getLeads(location) {
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
             OR selected_area LIKE CONCAT('%', 'Wanowrie', '%')
+            OR selected_area LIKE CONCAT('%', 'Salunkhe Vihar', '%')
           )
           ORDER BY appointment_id DESC
           LIMIT 100
@@ -247,7 +248,7 @@ async function getChatBotLeads(location) {
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
-            OR (branch LIKE '%Salunkhe Vihar%' OR chat_whatsapp_branch LIKE '%Salunke Vihar%') 
+            OR (branch LIKE '%Salunkhe Vihar%' OR chat_whatsapp_branch LIKE '%Salunke Vihar%' OR chat_whatsapp_branch LIKE '%Salunkhe Vihar%') 
             OR (branch LIKE '%Wanowrie%' OR chat_whatsapp_branch LIKE '%Wanowrie%')
           )
           ORDER BY id DESC
@@ -468,10 +469,72 @@ async function transferToBranch(id, toBranch) {
   });
 }
 
+/**
+ * Save Sulekha Lead
+ */
+async function createSulekhaLead(loc, leadData) {
+  const { connection } = getConnectionByLocation("lead");
+
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection((err, tempCon) => {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        INSERT INTO sulekha_leads (
+          user_name,
+          user_mobile,
+          user_email,
+          user_city,
+          location,
+          user_localities,
+          user_comments,
+          keywords,
+          created_at
+        )
+        VALUES (?, ?, ?,?, ?, ?, ?, ?, NOW())
+      `;
+
+      const queryParams = [
+        leadData.user_name,
+        leadData.user_mobile,
+        leadData.user_email,
+        leadData.user_city || "",
+        leadData.location,
+        Array.isArray(leadData.user_localities)
+          ? leadData.user_localities.join(", ")
+          : "",
+        leadData.user_comments || "",
+        leadData.keywords || "",
+      ];
+
+      tempCon.query(sql, queryParams, (error, result) => {
+        tempCon.release();
+
+        if (error) {
+          return reject(error);
+        }
+
+        resolve({
+          lead_id: result.insertId,
+        });
+      });
+    });
+  });
+}
+
 module.exports = {
   getLeads,
   updateStatus,
   getChatBotLeads,
   updateStatusBot,
   transferToBranch,
+  createSulekhaLead,
 };

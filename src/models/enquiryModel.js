@@ -4,7 +4,7 @@ const { addNote, addHelplineNote } = require("./noteModel");
 async function addEnquiry(appointments) {
   console.log("Adding enquiry for appointments:", appointments[0]);
   const { connection, location } = getConnectionByLocation(
-    appointments[0].patient_location
+    appointments[0].patient_location,
   );
   if (!connection) {
     const err = new Error("Invalid location");
@@ -59,7 +59,7 @@ async function addEnquiry(appointments) {
 
 async function addHelplineEnquiry(appointments) {
   const { connection, location } = getConnectionByLocation(
-    appointments[0].patient_location
+    appointments[0].patient_location,
   );
   if (!connection) {
     const err = new Error("Invalid location");
@@ -112,4 +112,79 @@ async function addHelplineEnquiry(appointments) {
   });
 }
 
-module.exports = { addEnquiry, addHelplineEnquiry };
+async function addHelplineSpam(appointments) {
+  const { connection, location } = getConnectionByLocation(
+    appointments[0].patient_location,
+  );
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  const values = appointments.map((appointment) => [
+    appointment.patient_type,
+    appointment.enquirytype,
+    appointment.patient_name,
+    appointment.patient_phone.replace(/^0+/, ""), // Remove starting "0",
+    appointment.date,
+    appointment.time,
+    location,
+    appointment.reference,
+    appointment.FDE_Name,
+    appointment.note,
+  ]);
+
+  try {
+    // Await the addNote function
+    await addHelplineNote(appointments);
+    return "Helpline Enquiry and note added!";
+  } catch (noteError) {
+    console.error("Failed to add Helpline note:", noteError);
+    // Decide how to handle the note error
+    return "Helpline Enquiry added, but failed to add note!";
+  }
+}
+
+async function addIVRSpam(appointments) {
+  console.log("Adding IVR spam for appointments:", appointments[0]);
+  const { connection, location } = getConnectionByLocation(
+    appointments[0].patient_location,
+  );
+
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  const values = appointments.map((appointment) => [
+    appointment.patient_type,
+    appointment.enquirytype,
+    appointment.patient_name,
+    appointment.patient_phone.replace(/^(\+91|91|0)+/, ""), // Remove starting "0",
+    appointment.date,
+    appointment.time,
+    location,
+    appointment.reference,
+    appointment.FDE_Name,
+    appointment.note,
+  ]);
+
+  try {
+    // Await the addNote function
+    await addNote(appointments);
+    return "Enquiry and note added!";
+  } catch (noteError) {
+    console.error("Failed to add note:", noteError);
+    // Decide how to handle the note error
+    return "Enquiry added, but failed to add note!";
+  }
+}
+
+module.exports = {
+  addEnquiry,
+  addHelplineEnquiry,
+  addHelplineSpam,
+  addIVRSpam,
+};

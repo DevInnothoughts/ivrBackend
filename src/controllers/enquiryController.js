@@ -1,6 +1,11 @@
 var express = require("express");
 var router = express.Router();
-const { addEnquiry, addHelplineEnquiry } = require("../models/enquiryModel");
+const {
+  addEnquiry,
+  addHelplineEnquiry,
+  addHelplineSpam,
+  addIVRSpam,
+} = require("../models/enquiryModel");
 
 router.post("/", async (req, res, next) => {
   try {
@@ -12,10 +17,30 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+router.post("/spam", async (req, res, next) => {
+  try {
+    const result = await addIVRSpam(req.body);
+    console.log("IVR Spam:", result);
+    res.status(200).send(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/helpline", async (req, res, next) => {
   try {
     const result = await addHelplineEnquiry(req.body);
     console.log("Helpline Enquiry:", result);
+    res.status(200).send(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/helpline/spam", async (req, res, next) => {
+  try {
+    const result = await addHelplineSpam(req.body);
+    console.log("Helpline Spam:", result);
     res.status(200).send(result);
   } catch (err) {
     next(err);

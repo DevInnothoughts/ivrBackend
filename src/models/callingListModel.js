@@ -1,5 +1,29 @@
 const { getConnectionByLocation } = require("../../databaseUtils");
 
+// calling_notes may be stored as '{}', NULL, or malformed JSON, but the client
+// expects a JSON array string it can JSON.parse(...).map(...). Coerce anything
+// that isn't a JSON array into '[]' so the UI never crashes.
+function normalizeNotesString(raw) {
+  if (!raw) return "[]";
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? JSON.stringify(parsed) : "[]";
+  } catch {
+    return "[]";
+  }
+}
+
+function normalizeRowsNotes(rows) {
+  if (Array.isArray(rows)) {
+    for (const r of rows) {
+      if (r && "calling_notes" in r) {
+        r.calling_notes = normalizeNotesString(r.calling_notes);
+      }
+    }
+  }
+  return rows;
+}
+
 async function getCallingList(loc) {
   const { connection, location } = getConnectionByLocation(loc);
   if (!connection) {
@@ -56,6 +80,100 @@ async function getCallingList(loc) {
 
         console.log(groupedData); // Log the grouped data
         resolve(groupedData);
+      });
+    });
+  });
+}
+
+async function getCallingListV1(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: 3,7,15,30 days
+      const daysQuery = `
+        SELECT DISTINCT
+          e.enquiry_id, 
+          e.enquirytype, 
+          e.patient_name, 
+          e.patient_phone, 
+          e.date, 
+          e.note,
+          e.calling_notes,
+          e.callbackDate,
+          DATEDIFF(CURDATE(), e.date) AS days_since
+        FROM appointment_enquiry e
+        LEFT JOIN appointment a
+          ON e.patient_phone = a.patient_phone
+        WHERE 
+          e.enquirytype != 'Visited'
+          AND (a.patient_phone IS NULL OR a.confirm_time = 0)
+          AND DATEDIFF(CURDATE(), e.date) IN (3, 7, 15, 30)
+        ORDER BY e.enquiry_id ASC
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+        SELECT DISTINCT
+          e.enquiry_id, 
+          e.enquirytype, 
+          e.patient_name, 
+          e.patient_phone, 
+          e.date, 
+          e.note,
+          e.calling_notes,
+          e.callbackDate
+        FROM appointment_enquiry e
+        LEFT JOIN appointment a
+          ON e.patient_phone = a.patient_phone
+        WHERE 
+          e.enquirytype != 'Visited'
+          AND (a.patient_phone IS NULL OR a.confirm_time = 0)
+          AND e.callbackDate = CURDATE()
+        ORDER BY e.enquiry_id ASC
+      `;
+
+      // 👉 Execute first query
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute callback query
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add callback group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+
+          resolve(groupedData);
+        });
       });
     });
   });
@@ -179,8 +297,106 @@ async function getSurgeryPatients(loc) {
           return acc;
         }, {});
 
-        console.log(groupedData); // Log the grouped data
+        //console.log(groupedData); // Log the grouped data
         resolve(groupedData);
+      });
+    });
+  });
+}
+
+async function getSurgeryPatientsV1(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: Existing days (3,7,15,30)
+      const daysQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate,
+          DATEDIFF(CURDATE(), d.date_diagnosis) AS days_since
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+         LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          DATEDIFF(CURDATE(), d.date_diagnosis) IN (3, 7, 15, 30)
+          AND d.diagnosisAdvice LIKE '%Surgery%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          d.callbackDate = CURDATE()
+          AND d.diagnosisAdvice LIKE '%Surgery%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Execute Query 1
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute Query 2
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add new group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+          console.log(groupedData); // Log the grouped data with callback group
+          resolve(groupedData);
+        });
       });
     });
   });
@@ -240,8 +456,106 @@ async function getMedicationPatients(loc) {
           return acc;
         }, {});
 
-        console.log(groupedData); // Log the grouped data
+        //console.log(groupedData); // Log the grouped data
         resolve(groupedData);
+      });
+    });
+  });
+}
+
+async function getMedicationPatientsV1(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: Existing days (3,7,15,30)
+      const daysQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate,
+          DATEDIFF(CURDATE(), d.date_diagnosis) AS days_since
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+         LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          DATEDIFF(CURDATE(), d.date_diagnosis) IN (3, 7, 15, 30)
+          AND d.diagnosisAdvice LIKE '%Medication%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+         LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          d.callbackDate = CURDATE()
+          AND d.diagnosisAdvice LIKE '%Medication%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Execute Query 1
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute Query 2
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add new group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+          console.log(groupedData); // Log the grouped data with callback group
+          resolve(groupedData);
+        });
       });
     });
   });
@@ -301,8 +615,206 @@ async function getTestPatients(loc) {
           return acc;
         }, {});
 
-        console.log(groupedData); // Log the grouped data
+        //console.log(groupedData); // Log the grouped data
         resolve(groupedData);
+      });
+    });
+  });
+}
+
+async function getTestPatientsV1(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: Existing days (3,7,15,30)
+      const daysQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate,
+          DATEDIFF(CURDATE(), d.date_diagnosis) AS days_since
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        
+        WHERE 
+          DATEDIFF(CURDATE(), d.date_diagnosis) IN (3, 7, 15, 30)
+          AND d.diagnosisAdvice LIKE '%Test%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          d.callbackDate = CURDATE()
+          AND d.diagnosisAdvice LIKE '%Test%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Execute Query 1
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute Query 2
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add new group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+          console.log(groupedData); // Log the grouped data with callback group
+          resolve(groupedData);
+        });
+      });
+    });
+  });
+}
+
+async function getMCDPAPatients(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: Existing days (3,7,15,30)
+      const daysQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate,
+          DATEDIFF(CURDATE(), d.date_diagnosis) AS days_since
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        
+        WHERE 
+          DATEDIFF(CURDATE(), d.date_diagnosis) IN (3, 7, 15, 30)
+          AND d.diagnosisAdvice LIKE '%MCDPA%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+        SELECT DISTINCT
+          d.diag_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.date_diagnosis,
+          d.diagnosis,
+          d.diagnosisAdvice,
+          d.calling_notes,
+          d.callbackDate
+        FROM diagnosis d
+        LEFT JOIN patient p ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.assistanceDoctor = dr.doctor_id
+        WHERE 
+          d.callbackDate = CURDATE()
+          AND d.diagnosisAdvice LIKE '%MCDPA%'
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Execute Query 1
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute Query 2
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add new group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+          console.log(groupedData); // Log the grouped data with callback group
+          resolve(groupedData);
+        });
       });
     });
   });
@@ -361,8 +873,106 @@ async function getIPDPatients(loc) {
           return acc;
         }, {});
 
-        console.log(groupedData); // Log the grouped data
+        //console.log(groupedData); // Log the grouped data
         resolve(groupedData);
+      });
+    });
+  });
+}
+
+async function getIPDPatientsV1(loc) {
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location", loc);
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      // 👉 Query 1: 3,7,15,30 days after discharge
+      const daysQuery = `
+        SELECT DISTINCT
+          d.discharge_id,
+          d.patient_id,
+          p.name AS patient_name,
+          p.phone AS patient_phone,
+          dr.name AS doctor_name,
+          d.DOD,
+          d.diagnosis,
+          d.surgical_procedure,
+          d.calling_notes,
+          d.callbackDate,
+          DATEDIFF(CURDATE(), d.DOD) AS days_since
+        FROM discharge_card d
+        LEFT JOIN patient p
+          ON d.patient_id = p.patient_id
+        LEFT JOIN doctor dr
+          ON d.consultantName = dr.doctor_id
+        WHERE 
+          DATEDIFF(CURDATE(), d.DOD) IN (3, 7, 15, 30)
+        ORDER BY d.patient_id ASC;
+      `;
+
+      // 👉 Query 2: Callback today
+      const callbackQuery = `
+  SELECT DISTINCT
+    d.discharge_id,
+    d.patient_id,
+    p.name AS patient_name,
+    p.phone AS patient_phone,
+    dr.name AS doctor_name,
+    d.DOD,
+    d.diagnosis,
+    d.surgical_procedure,
+    d.calling_notes,
+    d.callbackDate
+  FROM discharge_card d
+  LEFT JOIN patient p
+    ON d.patient_id = p.patient_id
+  LEFT JOIN doctor dr
+    ON d.consultantName = dr.doctor_id
+  WHERE 
+    d.callbackDate = CURDATE()
+  ORDER BY d.patient_id ASC;
+`;
+
+      // 👉 Execute first query
+      tempCon.query(daysQuery, function (err1, rows1) {
+        if (err1) {
+          tempCon.release();
+          return reject(err1);
+        }
+
+        normalizeRowsNotes(rows1);
+
+        // Group by days
+        const groupedData = rows1.reduce((acc, row) => {
+          const daysSince = row.days_since;
+          if (!acc[daysSince]) {
+            acc[daysSince] = [];
+          }
+          acc[daysSince].push(row);
+          return acc;
+        }, {});
+
+        // 👉 Execute callback query
+        tempCon.query(callbackQuery, function (err2, rows2) {
+          tempCon.release();
+
+          if (err2) {
+            return reject(err2);
+          }
+
+          // 👉 Add callback group
+          groupedData["callback"] = normalizeRowsNotes(rows2);
+
+          resolve(groupedData);
+        });
       });
     });
   });
@@ -422,7 +1032,7 @@ async function getTomorrowsAppointment(loc) {
 
           // console.log(rows); // Log the fetched appointments
           resolve(rows);
-        }
+        },
       );
     });
   });
@@ -483,7 +1093,7 @@ async function getTodaysAppointment(loc) {
 
           //console.log(rows); // Log the fetched appointments
           resolve(rows);
-        }
+        },
       );
     });
   });
@@ -498,4 +1108,10 @@ module.exports = {
   getIPDPatients,
   getTomorrowsAppointment,
   getTodaysAppointment,
+  getMedicationPatientsV1,
+  getSurgeryPatientsV1,
+  getTestPatientsV1,
+  getMCDPAPatients,
+  getIPDPatientsV1,
+  getCallingListV1,
 };

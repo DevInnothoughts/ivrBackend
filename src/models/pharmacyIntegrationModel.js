@@ -42,37 +42,43 @@ const conAhmedabad = createPool("hmsAhmedabadDB");
 const conMohali = createPool("hmsMohaliDB");
 const conAurangabad = createPool("hmsAurangabadDB");
 const conWhitefield = createPool("hmsWhitefieldDB");
+const conHadapsar = createPool("hmsHadapsarDB");
+const conKalyan = createPool("hmsKalyanDB");
+const conBopal = createPool("hmsBopalDB");
+const conElectroniccity = createPool("hmsElectroniccityDB");
+const conRRNagar = createPool("hmsRRNagarDB");
+const conAdajan = createPool("hmsAdajanDB");
 
 const providerMap = {
   C08RV: { locationName: "Test", connection: conTest },
-  HHC101: { locationName: "Hyderabad", connection: conHyderabad },
+  C44OA: { locationName: "Hyderabad", connection: conHyderabad },
   HHC102: { locationName: "DP Road", connection: conDP },
-  HHC103: { locationName: "Surat", connection: conSurat },
+  C44NT: { locationName: "Surat", connection: conSurat },
   C41PG: { locationName: "Ludhiana", connection: conLudhiana },
-  HHC105: { locationName: "Indiranagar", connection: conIndiranagar },
-  HHC106: { locationName: "Dighi", connection: conDighi },
-  HHC107: { locationName: "Thane", connection: conThane },
-  HHC108: { locationName: "Belagavi", connection: conBelgavi },
-  HHC109: { locationName: "HSR", connection: conHSR },
+  C45PF: { locationName: "Indiranagar", connection: conIndiranagar },
+  C45MY: { locationName: "Dighi", connection: conDighi },
+  C44Q9: { locationName: "Thane", connection: conThane },
+  C44O8: { locationName: "Belagavi", connection: conBelgavi },
+  C45NN: { locationName: "HSR", connection: conHSR },
   C0NVG: { locationName: "Bangalore", connection: conBangalore },
-  HHC111: { locationName: "Navi-Mumbai", connection: conNM },
+  C44QA: { locationName: "Navi-Mumbai", connection: conNM },
   C41HZ: { locationName: "Pimpri-Chinchwad", connection: conPC },
-  HHC113: { locationName: "Nashik", connection: conNashik },
+  C44NO: { locationName: "Nashik", connection: conNashik },
   C41GW: { locationName: "Salunkhe-Vihar", connection: conSV },
   C419F: { locationName: "Chakan", connection: conChakan },
-  HHC116: { locationName: "Baner", connection: conBaner },
+  C415V: { locationName: "Baner", connection: conBaner },
   HHC117: { locationName: "Kolhapur", connection: conKolhapur },
   C41JV: { locationName: "Secunderabad", connection: conSecunderabad },
-  HHC119: { locationName: "Andheri", connection: conAndheri },
-  HHC120: { locationName: "Sahakarnagar", connection: conSahakarnagar },
-  HHC121: { locationName: "Gurgaon-14", connection: conGurgaon14 },
+  C44QH: { locationName: "Andheri", connection: conAndheri },
+  C45S6: { locationName: "Sahakarnagar", connection: conSahakarnagar },
+  C4768: { locationName: "Gurgaon-14", connection: conGurgaon14 },
   HHC122: { locationName: "Gurgaon-49", connection: conGurgaon49 },
   HHC123: { locationName: "Kemps-Corner", connection: conkc },
   HHC124: { locationName: "Latur", connection: conLatur },
   HHC125: { locationName: "Indore", connection: conIndore },
   C42FD: { locationName: "Mysore", connection: conMysore },
-  HHC127: { locationName: "Undri", connection: conUndri },
-  HHC128: { locationName: "Vashi", connection: conVashi },
+  C47A6: { locationName: "Undri", connection: conUndri },
+  C44OC: { locationName: "Vashi", connection: conVashi },
   HHC129: { locationName: "Hinjewadi", connection: conHinjewadi },
   C3KKO: { locationName: "Lucknow", connection: conLucknow },
   HHC131: { locationName: "Kalaburagi", connection: conKalaburagi },
@@ -83,6 +89,13 @@ const providerMap = {
   C419B: { locationName: "Ahmedabad", connection: conAhmedabad },
   C41H6: { locationName: "Mohali", connection: conMohali },
   C43N1: { locationName: "Aurangabad", connection: conAurangabad },
+  C45UP: { locationName: "Whitefield", connection: conWhitefield },
+  C45U2: { locationName: "Hadapsar", connection: conHadapsar },
+  C493A: { locationName: "Kalyan", connection: conKalyan },
+  HHC139: { locationName: "Bopal", connection: conBopal },
+  C4AO7: { locationName: "Electronic City", connection: conElectroniccity },
+  HHC140: { locationName: "Adajan", connection: conAdajan },
+  HHC141: { locationName: "RR Nagar", connection: conRRNagar },
 };
 
 const getConnectionByProviderId = (providerId) => {
@@ -126,6 +139,98 @@ async function saveInvoice(chemist_code, invoiceData) {
   });
 }
 
+async function savePaymentUpdate(chemist_code, paymentData) {
+  const { connection } = getConnectionByProviderId(chemist_code);
+
+  if (!connection) {
+    throw new Error("Invalid chemist_code / Provider");
+  }
+
+  const transactionIdsNumbers =
+    paymentData.transaction_summary?.transaction_ids_numbers ?? [];
+
+  if (transactionIdsNumbers.length === 0) {
+    throw new Error(
+      "No transaction_ids_numbers found in payment_update payload",
+    );
+  }
+
+  // Only use the first order_number
+  const orderNumber = transactionIdsNumbers[0].order_number;
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection((err, tempCon) => {
+      if (err) return reject(err);
+
+      const query = `
+        UPDATE evital_pharmacy_invoice
+        SET
+          UpdatedInvoiceDetails = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = ?
+      `;
+
+      const params = [JSON.stringify(paymentData), orderNumber];
+
+      tempCon.query(query, params, (error, result) => {
+        tempCon.release();
+
+        if (error) return reject(error);
+
+        if (result.affectedRows === 0) {
+          console.warn(
+            "Payment update: no matching invoice found for order_number:",
+            orderNumber,
+          );
+        }
+
+        resolve(result);
+      });
+    });
+  });
+}
+
+async function updateInvoice(chemist_code, invoiceData) {
+  const { connection } = getConnectionByProviderId(chemist_code);
+
+  if (!connection) {
+    throw new Error("Invalid chemist_code / Provider");
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection((err, tempCon) => {
+      if (err) return reject(err);
+
+      const query = `
+        UPDATE evital_pharmacy_invoice
+        SET
+          invoice_details = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = ?
+      `;
+
+      const params = [JSON.stringify(invoiceData), invoiceData.order_number];
+
+      tempCon.query(query, params, (error, result) => {
+        tempCon.release();
+
+        if (error) return reject(error);
+
+        if (result.affectedRows === 0) {
+          console.warn(
+            "Invoice edit: no matching invoice found for order_number:",
+            invoiceData.order_number,
+          );
+        }
+
+        resolve(result);
+      });
+    });
+  });
+}
+
 module.exports = {
   saveInvoice,
+  savePaymentUpdate,
+  updateInvoice,
 };

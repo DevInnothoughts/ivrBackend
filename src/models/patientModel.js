@@ -28,4 +28,36 @@ async function getPatient(mobile, location) {
   });
 }
 
-module.exports = { getPatient };
+async function updateProctoURL(uhid, url, location) {
+  const { connection } = getConnectionByLocation(location);
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+      console.log("Updating Procto URL:", uhid, location, url);
+      // Using parameterized query to prevent SQL injection
+      const query = `
+            INSERT INTO proctoscopydata (patient_id, url, procto_date)
+            VALUES (?, ?, NOW())
+            ON DUPLICATE KEY UPDATE url = ?
+          `;
+      tempCon.query(query, [uhid, url, url], function (error, rows, fields) {
+        tempCon.release();
+        if (error) {
+          return reject(error);
+        }
+        console.log("Patient Details:", rows);
+        resolve(rows);
+      });
+    });
+  });
+}
+
+module.exports = { getPatient, updateProctoURL };

@@ -1,11 +1,54 @@
 const { getConnectionByLocation } = require("../../databaseUtils");
 
+// async function addNote(appointments) {
+//   const { connection } = getConnectionByLocation(
+//     appointments[0].patient_location
+//   );
+//   if (!connection) {
+//     const err = new Error("Invalid location", appointments[0].patient_location);
+//     err.status = 404;
+//     throw err;
+//   }
+
+//   return new Promise((resolve, reject) => {
+//     connection.getConnection(function (err, tempCon) {
+//       if (err) {
+//         tempCon.release();
+//         return reject(err);
+//       }
+
+//       var sql = `UPDATE IVRdata
+//                  SET note = ?
+//                  WHERE call_date = ? AND call_time = ? AND caller_no = ?
+//                  ORDER BY ivr_id DESC
+//                  LIMIT 1`;
+//       const ivrQueryParams = [
+//         appointments[0].note,
+//         appointments[0].Call_Date,
+//         appointments[0].Call_Time,
+//         appointments[0].patient_phone,
+//       ];
+//       console.log(sql, ivrQueryParams);
+//       tempCon.query(sql, ivrQueryParams, function (error, result) {
+//         tempCon.release();
+//         if (error) {
+//           console.log("Error while adding note!");
+//           return reject(error);
+//         }
+//         console.log("Note Added!", result);
+//         resolve("Note added!");
+//       });
+//     });
+//   });
+// }
+
 async function addNote(appointments) {
   const { connection } = getConnectionByLocation(
-    appointments[0].patient_location
+    appointments[0].patient_location,
   );
+
   if (!connection) {
-    const err = new Error("Invalid location", appointments[0].patient_location);
+    const err = new Error("Invalid location");
     err.status = 404;
     throw err;
   }
@@ -13,30 +56,41 @@ async function addNote(appointments) {
   return new Promise((resolve, reject) => {
     connection.getConnection(function (err, tempCon) {
       if (err) {
-        tempCon.release();
+        if (tempCon) tempCon.release();
         return reject(err);
       }
 
-      var sql = `UPDATE IVRdata 
-                 SET note = ?
-                 WHERE call_date = ? AND call_time = ? AND caller_no = ?
-                 ORDER BY ivr_id DESC
-                 LIMIT 1`;
-      const ivrQueryParams = [
+      const sql = `
+                  UPDATE IVRdata
+                  SET note = ?
+                  WHERE call_date = ? AND call_time = ? AND caller_no = ?
+                  ORDER BY ivr_id DESC
+                  LIMIT 1
+      `;
+
+      const params = [
         appointments[0].note,
-        appointments[0].Call_Date,
-        appointments[0].Call_Time,
+        appointments[0].Call_Date, // MUST be YYYY-MM-DD
+        appointments[0].Call_Time, // MUST be HH:MM:SS (24hr)
         appointments[0].patient_phone,
       ];
-      console.log(sql, ivrQueryParams);
-      tempCon.query(sql, ivrQueryParams, function (error, result) {
+
+      ///console.log(sql, params);
+
+      tempCon.query(sql, params, function (error, result) {
         tempCon.release();
+
         if (error) {
-          console.log("Error while adding note!");
+          console.log("Error while adding note!", error);
           return reject(error);
         }
-        console.log("Note Added!", result);
-        resolve("Note added!");
+
+        // if (result.affectedRows === 0) {
+        //   return reject(new Error("No records updated"));
+        // }
+
+        //console.log("Notes updated!", result);
+        resolve(`Updated ${result.affectedRows} records`);
       });
     });
   });
@@ -44,7 +98,7 @@ async function addNote(appointments) {
 
 async function addHelplineNote(appointments) {
   const { connection } = getConnectionByLocation(
-    appointments[0].patient_location
+    appointments[0].patient_location,
   );
   if (!connection) {
     const err = new Error("Invalid location", appointments[0].patient_location);
@@ -65,7 +119,7 @@ async function addHelplineNote(appointments) {
                  `;
 
       const ivrQueryParams = [appointments[0].note, appointments[0].timestamp];
-      console.log(sql, ivrQueryParams);
+      //console.log(sql, ivrQueryParams);
       tempCon.query(sql, ivrQueryParams, function (error, result) {
         tempCon.release();
         if (error) {
@@ -109,6 +163,9 @@ async function addCallingNote(newNote, date, enquiry_id, loc) {
         if (results.length > 0 && results[0].calling_notes) {
           try {
             callingNotes = JSON.parse(results[0].calling_notes) || [];
+            // Existing data may be '{}' (an object) or other non-array JSON;
+            // notes must be an array before we push.
+            if (!Array.isArray(callingNotes)) callingNotes = [];
             console.log("Existing Calling Notes:", callingNotes);
           } catch (parseError) {
             tempCon.release();
@@ -116,7 +173,7 @@ async function addCallingNote(newNote, date, enquiry_id, loc) {
           }
         } else {
           console.log(
-            "No existing calling notes found, initializing as empty array."
+            "No existing calling notes found, initializing as empty array.",
           );
         }
 
@@ -145,7 +202,7 @@ async function addCallingNote(newNote, date, enquiry_id, loc) {
               message: "Calling Note added!",
               updatedNotes: callingNotes,
             });
-          }
+          },
         );
       });
     });
@@ -182,6 +239,9 @@ async function addSurgeryCallingNote(newNote, date, id, loc) {
         if (results.length > 0 && results[0].calling_notes) {
           try {
             callingNotes = JSON.parse(results[0].calling_notes) || [];
+            // Existing data may be '{}' (an object) or other non-array JSON;
+            // notes must be an array before we push.
+            if (!Array.isArray(callingNotes)) callingNotes = [];
             console.log("Existing Calling Notes:", callingNotes);
           } catch (parseError) {
             tempCon.release();
@@ -189,7 +249,7 @@ async function addSurgeryCallingNote(newNote, date, id, loc) {
           }
         } else {
           console.log(
-            "No existing calling notes found, initializing as empty array."
+            "No existing calling notes found, initializing as empty array.",
           );
         }
 
@@ -218,7 +278,7 @@ async function addSurgeryCallingNote(newNote, date, id, loc) {
               message: "Calling Note added!",
               updatedNotes: callingNotes,
             });
-          }
+          },
         );
       });
     });
@@ -255,6 +315,9 @@ async function addPostOpCallingNote(newNote, date, id, loc) {
         if (results.length > 0 && results[0].calling_notes) {
           try {
             callingNotes = JSON.parse(results[0].calling_notes) || [];
+            // Existing data may be '{}' (an object) or other non-array JSON;
+            // notes must be an array before we push.
+            if (!Array.isArray(callingNotes)) callingNotes = [];
             console.log("Existing Calling Notes:", callingNotes);
           } catch (parseError) {
             tempCon.release();
@@ -262,7 +325,7 @@ async function addPostOpCallingNote(newNote, date, id, loc) {
           }
         } else {
           console.log(
-            "No existing calling notes found, initializing as empty array."
+            "No existing calling notes found, initializing as empty array.",
           );
         }
 
@@ -291,8 +354,140 @@ async function addPostOpCallingNote(newNote, date, id, loc) {
               message: "Calling Note added!",
               updatedNotes: callingNotes,
             });
-          }
+          },
         );
+      });
+    });
+  });
+}
+
+async function addCallbackDate(id, callbackDate, loc) {
+  console.log("Input Parameters:", { id, callbackDate, loc });
+
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        UPDATE diagnosis
+        SET callbackDate = ?
+        WHERE diag_id = ?
+      `;
+
+      // Since your column is DATE, send only YYYY-MM-DD
+      const formattedDate = new Date(callbackDate).toISOString().split("T")[0];
+
+      tempCon.query(sql, [formattedDate, id], function (error, result) {
+        tempCon.release();
+
+        if (error) {
+          console.error("Error while updating callback date:", error);
+          return reject(error);
+        }
+
+        console.log("Callback Date Updated!", result);
+
+        resolve({
+          message: "Callback date updated successfully",
+          affectedRows: result.affectedRows,
+        });
+      });
+    });
+  });
+}
+
+async function addPOCallbackDate(id, callbackDate, loc) {
+  console.log("Input Parameters:", { id, callbackDate, loc });
+
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        UPDATE discharge_card
+        SET callBackDate = ?
+        WHERE discharge_id = ?
+      `;
+
+      // Since your column is DATE, send only YYYY-MM-DD
+      const formattedDate = new Date(callbackDate).toISOString().split("T")[0];
+
+      tempCon.query(sql, [formattedDate, id], function (error, result) {
+        tempCon.release();
+
+        if (error) {
+          console.error("Error while updating callback date:", error);
+          return reject(error);
+        }
+
+        console.log("Callback Date Updated!", result);
+
+        resolve({
+          message: "Callback date updated successfully",
+          affectedRows: result.affectedRows,
+        });
+      });
+    });
+  });
+}
+
+async function addEnquiryCallbackDate(id, callbackDate, loc) {
+  console.log("Input Parameters:", { id, callbackDate, loc });
+
+  const { connection } = getConnectionByLocation(loc);
+  if (!connection) {
+    const err = new Error("Invalid location");
+    err.status = 404;
+    throw err;
+  }
+
+  return new Promise((resolve, reject) => {
+    connection.getConnection(function (err, tempCon) {
+      if (err) {
+        return reject(err);
+      }
+
+      const sql = `
+        UPDATE appointment_enquiry
+        SET callBackDate = ?
+        WHERE enquiry_id = ?
+      `;
+
+      // Since your column is DATE, send only YYYY-MM-DD
+      const formattedDate = new Date(callbackDate).toISOString().split("T")[0];
+
+      tempCon.query(sql, [formattedDate, id], function (error, result) {
+        tempCon.release();
+
+        if (error) {
+          console.error("Error while updating callback date:", error);
+          return reject(error);
+        }
+
+        console.log("Callback Date Updated!", result);
+
+        resolve({
+          message: "Callback date updated successfully",
+          affectedRows: result.affectedRows,
+        });
       });
     });
   });
@@ -304,4 +499,7 @@ module.exports = {
   addSurgeryCallingNote,
   addPostOpCallingNote,
   addHelplineNote,
+  addCallbackDate,
+  addPOCallbackDate,
+  addEnquiryCallbackDate,
 };

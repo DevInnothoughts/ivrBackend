@@ -42,6 +42,12 @@ const conAhmedabad = createPool("hmsAhmedabadDB");
 const conMohali = createPool("hmsMohaliDB");
 const conAurangabad = createPool("hmsAurangabadDB");
 const conWhitefield = createPool("hmsWhitefieldDB");
+const conHadapsar = createPool("hmsHadapsarDB");
+const conKalyan = createPool("hmsKalyanDB");
+const conBopal = createPool("hmsBopalDB");
+const conElectroniccity = createPool("hmsElectroniccityDB");
+const conRRNagar = createPool("hmsRRNagarDB");
+const conAdajan = createPool("hmsAdajanDB");
 
 const providerMap = {
   HHC000: { locationName: "Test", connection: conTest },
@@ -84,6 +90,12 @@ const providerMap = {
   HHC137: { locationName: "Mohali", connection: conMohali },
   HHC138: { locationName: "Aurangabad", connection: conAurangabad },
   HHC139: { locationName: "Whitefield", connection: conWhitefield },
+  HHC140: { locationName: "Hadapsar", connection: conHadapsar },
+  HHC141: { locationName: "Kalyan", connection: conKalyan },
+  HHC142: { locationName: "Bopal", connection: conBopal },
+  HHC143: { locationName: "Electronic City", connection: conElectroniccity },
+  HHC144: { locationName: "Adajan", connection: conAdajan },
+  HHC145: { locationName: "RR Nagar", connection: conRRNagar },
 };
 
 const insuranceCompanies = [
@@ -1479,63 +1491,142 @@ async function savePatientStatusUpdateProd(payload) {
           // });
 
           // Step 2: If ipNumber and settledAmount are provided, update insurance_invoice
+          // let patientId, invoiceId;
+
+          // if (ipNumber) {
+          //   // Fetch invoice using admission_no
+          //   const invoiceResult = await new Promise((res, rej) => {
+          //     tempCon.query(
+          //       `SELECT invoice_id, patient_id FROM invoice WHERE admission_no = ? LIMIT 1`,
+          //       [ipNumber],
+          //       (error, rows) => (error ? rej(error) : res(rows)),
+          //     );
+          //   });
+          //   console.log(invoiceResult);
+          //   if (invoiceResult && invoiceResult.length > 0) {
+          //     invoiceId = invoiceResult[0].invoice_id;
+          //     patientId = invoiceResult[0].patient_id;
+          //   }
+          // } else {
+          //   // Fetch patient_id using uhid or mobileNumber
+          //   if (uhid) {
+          //     const patientResult = await new Promise((res, rej) => {
+          //       tempCon.query(
+          //         `SELECT patient_id FROM patient WHERE Uid_no = ? LIMIT 1`,
+          //         [uhid],
+          //         (error, rows) => (error ? rej(error) : res(rows)),
+          //       );
+          //     });
+          //     console.log(patientResult);
+          //     if (patientResult && patientResult.length > 0) {
+          //       patientId = patientResult[0].patient_id;
+          //     }
+          //   } else if (mobileNumber) {
+          //     const patientResult = await new Promise((res, rej) => {
+          //       tempCon.query(
+          //         `SELECT patient_id FROM patient WHERE phone = ? LIMIT 1`,
+          //         [mobileNumber],
+          //         (error, rows) => (error ? rej(error) : res(rows)),
+          //       );
+          //     });
+          //     console.log(patientResult);
+          //     if (patientResult && patientResult.length > 0) {
+          //       patientId = patientResult[0].patient_id;
+          //     }
+          //   }
+
+          //   // Fetch invoice using patient_id
+          //   if (patientId) {
+          //     const invoiceResult = await new Promise((res, rej) => {
+          //       tempCon.query(
+          //         `SELECT invoice_id FROM invoice WHERE patient_id = ? LIMIT 1`,
+          //         [patientId],
+          //         (error, rows) => (error ? rej(error) : res(rows)),
+          //       );
+          //     });
+          //     console.log(invoiceResult);
+          //     if (invoiceResult && invoiceResult.length > 0) {
+          //       invoiceId = invoiceResult[0].invoice_id;
+          //     }
+          //   }
+          // }
+
           let patientId, invoiceId;
 
-          if (ipNumber) {
-            // Fetch invoice using admission_no
+          // 1. First priority → mobileNumber
+          if (mobileNumber) {
+            const patientResult = await new Promise((res, rej) => {
+              tempCon.query(
+                `SELECT patient_id FROM patient WHERE phone = ? AND is_deleted != 1 AND ConfirmPatient = 1 ORDER BY patient_id DESC LIMIT 1`,
+                [mobileNumber],
+                (error, rows) => (error ? rej(error) : res(rows)),
+              );
+            });
+
+            console.log("Mobile Result:", patientResult);
+
+            if (patientResult && patientResult.length > 0) {
+              patientId = patientResult[0].patient_id;
+            }
+          }
+
+          // 2. If patient not found → use UHID
+          if (!patientId && uhid) {
+            const patientResult = await new Promise((res, rej) => {
+              tempCon.query(
+                `SELECT patient_id FROM patient WHERE Uid_no = ? AND is_deleted != 1 AND ConfirmPatient = 1 ORDER BY patient_id DESC LIMIT 1`,
+                [uhid],
+                (error, rows) => (error ? rej(error) : res(rows)),
+              );
+            });
+
+            console.log("UHID Result:", patientResult);
+
+            if (patientResult && patientResult.length > 0) {
+              patientId = patientResult[0].patient_id;
+            }
+          }
+
+          // 3. Last priority → IP Number
+          if (!patientId && ipNumber) {
             const invoiceResult = await new Promise((res, rej) => {
               tempCon.query(
-                `SELECT invoice_id, patient_id FROM invoice WHERE admission_no = ? LIMIT 1`,
+                `SELECT invoice_id, patient_id 
+       FROM invoice 
+       WHERE admission_no = ? AND is_deleted != 1
+       LIMIT 1`,
                 [ipNumber],
                 (error, rows) => (error ? rej(error) : res(rows)),
               );
             });
-            console.log(invoiceResult);
+
+            console.log("IP Result:", invoiceResult);
+
             if (invoiceResult && invoiceResult.length > 0) {
               invoiceId = invoiceResult[0].invoice_id;
               patientId = invoiceResult[0].patient_id;
             }
-          } else {
-            // Fetch patient_id using uhid or mobileNumber
-            if (uhid) {
-              const patientResult = await new Promise((res, rej) => {
-                tempCon.query(
-                  `SELECT patient_id FROM patient WHERE Uid_no = ? LIMIT 1`,
-                  [uhid],
-                  (error, rows) => (error ? rej(error) : res(rows)),
-                );
-              });
-              console.log(patientResult);
-              if (patientResult && patientResult.length > 0) {
-                patientId = patientResult[0].patient_id;
-              }
-            } else if (mobileNumber) {
-              const patientResult = await new Promise((res, rej) => {
-                tempCon.query(
-                  `SELECT patient_id FROM patient WHERE phone = ? LIMIT 1`,
-                  [mobileNumber],
-                  (error, rows) => (error ? rej(error) : res(rows)),
-                );
-              });
-              console.log(patientResult);
-              if (patientResult && patientResult.length > 0) {
-                patientId = patientResult[0].patient_id;
-              }
-            }
+          }
 
-            // Fetch invoice using patient_id
-            if (patientId) {
-              const invoiceResult = await new Promise((res, rej) => {
-                tempCon.query(
-                  `SELECT invoice_id FROM invoice WHERE patient_id = ? LIMIT 1`,
-                  [patientId],
-                  (error, rows) => (error ? rej(error) : res(rows)),
-                );
-              });
-              console.log(invoiceResult);
-              if (invoiceResult && invoiceResult.length > 0) {
-                invoiceId = invoiceResult[0].invoice_id;
-              }
+          // 4. Fetch invoice using patient_id if not already found
+          if (patientId && !invoiceId) {
+            const invoiceResult = await new Promise((res, rej) => {
+              tempCon.query(
+                `SELECT invoice_id
+       FROM invoice
+       WHERE patient_id = ?
+       AND is_deleted != 1
+       ORDER BY invoice_id DESC
+       LIMIT 1`,
+                [patientId],
+                (error, rows) => (error ? rej(error) : res(rows)),
+              );
+            });
+
+            console.log("Latest Invoice Result:", invoiceResult);
+
+            if (invoiceResult && invoiceResult.length > 0) {
+              invoiceId = invoiceResult[0].invoice_id;
             }
           }
 
@@ -1559,11 +1650,11 @@ async function savePatientStatusUpdateProd(payload) {
             await new Promise((res, rej) => {
               tempCon.query(
                 `UPDATE insurance_invoice
-                  SET receivedamt = ?, paymentdate = NOW()
+                  SET receivedamt = ?, paymentdate = NOW(), utrno = ?
                   WHERE invoiceid = ? AND patientid = ? 
                   ORDER BY invoice_id DESC
                   LIMIT 1`,
-                [settledAmount, invoiceId, patientId],
+                [settledAmount, utrNo, invoiceId, patientId],
                 (err, result) => (err ? rej(err) : res(result)),
               );
             });
