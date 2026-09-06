@@ -48,6 +48,7 @@ const conBopal = createPool("hmsBopalDB");
 const conElectroniccity = createPool("hmsElectroniccityDB");
 const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
+const conRaipur = createPool("hmsRaipurDB");
 
 const providerMap = {
   C08RV: { locationName: "Test", connection: conTest },
@@ -79,7 +80,7 @@ const providerMap = {
   C42FD: { locationName: "Mysore", connection: conMysore },
   C47A6: { locationName: "Undri", connection: conUndri },
   C44OC: { locationName: "Vashi", connection: conVashi },
-  HHC129: { locationName: "Hinjewadi", connection: conHinjewadi },
+  C4C2U: { locationName: "Hinjewadi", connection: conHinjewadi },
   C3KKO: { locationName: "Lucknow", connection: conLucknow },
   HHC131: { locationName: "Kalaburagi", connection: conKalaburagi },
   C2H33: { locationName: "Rajaji Nagar", connection: conRajajiNagar },
@@ -95,7 +96,8 @@ const providerMap = {
   HHC139: { locationName: "Bopal", connection: conBopal },
   C4AO7: { locationName: "Electronic City", connection: conElectroniccity },
   HHC140: { locationName: "Adajan", connection: conAdajan },
-  HHC141: { locationName: "RR Nagar", connection: conRRNagar },
+  C4D4S: { locationName: "RR Nagar", connection: conRRNagar },
+  HHC142: { LocationName: "Raipur", connection: conRaipur },
 };
 
 const getConnectionByProviderId = (providerId) => {

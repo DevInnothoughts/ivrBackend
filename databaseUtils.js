@@ -47,6 +47,7 @@ const conBopal = createPool("hmsBopalDB");
 const conElectroniccity = createPool("hmsElectroniccityDB");
 const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
+const conRaipur = createPool("hmsRaipurDB");
 
 const getConnectionByLocation = (loc) => {
   console.log("Get Connection Of:", loc);
@@ -340,6 +341,11 @@ const getConnectionByLocation = (loc) => {
     case "Adajan Gam":
       connection = conAdajan;
       location = "Adajan";
+      break;
+
+    case "Raipur":
+      connection = conRaipur;
+      location = "Raipur";
       break;
 
     default:

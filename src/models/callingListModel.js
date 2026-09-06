@@ -304,10 +304,154 @@ async function getSurgeryPatients(loc) {
   });
 }
 
+/* =====================================================================
+ * SURGERY CALLING LIST — calling_notes cleaner
+ * =====================================================================
+ * WHY THIS EXISTS
+ * -------------------------------------------------------------------
+ * The published mobile app renders the notes like this:
+ *
+ *     item.calling_notes && JSON.parse(item.calling_notes).map(n => n.note)
+ *
+ * So whatever we send back MUST obey two rules, or the screen crashes:
+ *
+ *   RULE 1  There ARE notes  -> send a JSON *string* of an array,
+ *                               e.g. '[{"note":"Called","date":"2026-07-28T..."}]'
+ *                               (a string, because the app calls JSON.parse on it)
+ *
+ *   RULE 2  There are NO notes -> send null, NOT '[]'.
+ *                               '[]' is a non-empty string, so the app's
+ *                               `item.calling_notes &&` check passes and it
+ *                               draws an empty "Action Taken" heading.
+ *                               null makes it skip the whole block.
+ *
+ * WHAT USED TO GO WRONG
+ * -------------------------------------------------------------------
+ * The `calling_notes` column comes back in different shapes depending on
+ * how the row was written and which driver/column type is in play:
+ *
+ *     '[{"note":"..."}]'   a JSON string        <- the good case
+ *     [{ note: "..." }]    a real JS array      <- JSON column, already parsed
+ *     []                   a real empty array
+ *     '{}' / '' / null     junk / never written
+ *     '"[{...}]"'          stringified twice
+ *
+ * JSON.parse() only works on the first one. On a real array it silently
+ * becomes JSON.parse("[object Object]") and throws, which is why notes
+ * were disappearing and the screen was dying.
+ *
+ * These helpers are named `surgery*` on purpose: the other calling lists
+ * still use the old shared normalizeRowsNotes() above, so nothing else in
+ * this file changes behaviour.
+ * ===================================================================== */
+
+// STEP A: turn ANY shape of calling_notes into a plain JS array. Never throws.
+function surgeryNotesToArray(raw) {
+  let value = raw;
+
+  // A JSON column can be stored double-encoded, so unwrap a few times.
+  for (let i = 0; i < 3; i++) {
+    if (value === null || value === undefined) return [];
+
+    // Some drivers hand back a Buffer for TEXT/BLOB columns.
+    if (Buffer.isBuffer(value)) value = value.toString("utf8");
+
+    // Already a real array / object? Nothing left to unwrap.
+    if (typeof value !== "string") break;
+
+    const trimmed = value.trim();
+    if (
+      !trimmed ||
+      trimmed === "null" ||
+      trimmed === "undefined" ||
+      trimmed === "[]"
+    ) {
+      return [];
+    }
+
+    // Doesn't start with [ { or " -> it's plain text, not JSON.
+    // Old rows sometimes hold a bare note like: Patient will confirm
+    if (!/^[\[{"]/.test(trimmed)) {
+      return [{ note: trimmed, date: null }];
+    }
+
+    try {
+      value = JSON.parse(trimmed);
+    } catch (e) {
+      // Broken JSON: keep the text as one note instead of losing it.
+      return [{ note: trimmed, date: null }];
+    }
+  }
+
+  // A single object { note, date } is wrapped so callers always get an array.
+  return Array.isArray(value) ? value : [value];
+}
+
+// STEP B: the app puts note.note straight inside a <Text>. If that value is
+// an object, React Native throws "Objects are not valid as a React child",
+// so force it to a string here.
+function surgeryNoteText(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return "";
+  }
+}
+
+// STEP C: the app does new Date(note.date).toLocaleDateString('en-GB').
+// Return an ISO string it can always read, or null if the date is unusable.
+function surgeryIsoDate(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+// STEP D: clean every row of a result set, in place, and return the rows.
+// (The return matters: groupedData.callback is assigned from it.)
+function normalizeSurgeryRows(rows) {
+  if (!Array.isArray(rows)) return [];
+
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+
+    const notes = surgeryNotesToArray(row.calling_notes)
+      .filter((n) => n && typeof n === "object")
+      .map((n) => ({
+        // Accept whichever key name the note was saved under.
+        note: surgeryNoteText(n.note !== undefined ? n.note : n.notes),
+        // If a note has no usable date, fall back to the diagnosis date so
+        // the app never prints "Invalid Date".
+        date:
+          surgeryIsoDate(n.date || n.createdAt || n.created_at) ||
+          surgeryIsoDate(row.date_diagnosis),
+      }))
+      .filter((n) => n.note.length > 0); // drop blank notes
+
+    // RULE 1 and RULE 2 from the header comment.
+    row.calling_notes = notes.length > 0 ? JSON.stringify(notes) : null;
+
+    // Small extra guard: handleWhatsapp() in the app calls
+    // callNumber.startsWith('0'), which throws if phone is NULL in the DB.
+    // Sending "" instead of null keeps that button from crashing the screen.
+    row.patient_phone =
+      row.patient_phone == null ? "" : String(row.patient_phone);
+    row.patient_name = row.patient_name == null ? "" : String(row.patient_name);
+    row.doctor_name = row.doctor_name == null ? "" : String(row.doctor_name);
+    row.diagnosis = row.diagnosis == null ? "" : String(row.diagnosis);
+  }
+
+  return rows;
+}
+
 async function getSurgeryPatientsV1(loc) {
   const { connection } = getConnectionByLocation(loc);
   if (!connection) {
-    const err = new Error("Invalid location", loc);
+    // new Error(msg, loc) ignores the 2nd argument, so put loc in the message.
+    const err = new Error(`Invalid location: ${loc}`);
     err.status = 404;
     throw err;
   }
@@ -318,7 +462,7 @@ async function getSurgeryPatientsV1(loc) {
         return reject(err);
       }
 
-      // 👉 Query 1: Existing days (3,7,15,30)
+      // 👉 Query 1: rows diagnosed exactly 3 / 7 / 15 / 30 days ago
       const daysQuery = `
         SELECT DISTINCT
           d.diag_id,
@@ -342,7 +486,7 @@ async function getSurgeryPatientsV1(loc) {
         ORDER BY d.patient_id ASC;
       `;
 
-      // 👉 Query 2: Callback today
+      // 👉 Query 2: rows whose callbackDate is today
       const callbackQuery = `
         SELECT DISTINCT
           d.diag_id,
@@ -365,36 +509,51 @@ async function getSurgeryPatientsV1(loc) {
         ORDER BY d.patient_id ASC;
       `;
 
-      // 👉 Execute Query 1
+      // ================= STEP 1: run the "days" query =================
       tempCon.query(daysQuery, function (err1, rows1) {
         if (err1) {
           tempCon.release();
           return reject(err1);
         }
 
-        normalizeRowsNotes(rows1);
+        // ===== STEP 2: clean calling_notes on every row ==================
+        // Without this the app crashes on JSON.parse. See normalizeSurgeryRows.
+        normalizeSurgeryRows(rows1);
 
-        // Group by days
-        const groupedData = rows1.reduce((acc, row) => {
+        // ===== STEP 3: group rows into the app's tabs ====================
+        // The keys here must match the tab keys in the app:
+        //   '3', '7', '15', '30', 'callback'
+        // Starting with empty arrays keeps the response shape predictable,
+        // so a day with no patients still shows "No record available!".
+        const groupedData = { 3: [], 7: [], 15: [], 30: [] };
+
+        for (const row of rows1) {
           const daysSince = row.days_since;
-          if (!acc[daysSince]) {
-            acc[daysSince] = [];
+          if (!groupedData[daysSince]) {
+            groupedData[daysSince] = [];
           }
-          acc[daysSince].push(row);
-          return acc;
-        }, {});
+          groupedData[daysSince].push(row);
+        }
 
-        // 👉 Execute Query 2
+        // ===== STEP 4: run the "callback today" query ====================
         tempCon.query(callbackQuery, function (err2, rows2) {
-          tempCon.release();
+          tempCon.release(); // always give the pooled connection back
 
           if (err2) {
             return reject(err2);
           }
 
-          // 👉 Add new group
-          groupedData["callback"] = normalizeRowsNotes(rows2);
-          console.log(groupedData); // Log the grouped data with callback group
+          // ===== STEP 5: clean those rows too, add them as the last tab ==
+          groupedData.callback = normalizeSurgeryRows(rows2);
+
+          // ===== STEP 6: log a short summary, not every single row =======
+          console.log(
+            "[surgeryAdvised]",
+            Object.keys(groupedData)
+              .map((key) => `${key}=${groupedData[key].length}`)
+              .join("  "),
+          );
+
           resolve(groupedData);
         });
       });
