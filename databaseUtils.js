@@ -48,6 +48,7 @@ const conElectroniccity = createPool("hmsElectroniccityDB");
 const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
 const conRaipur = createPool("hmsRaipurDB");
+const conKalyanNagar = createPool("hmsKalyanNagarDB");
 
 const getConnectionByLocation = (loc) => {
   console.log("Get Connection Of:", loc);
@@ -113,6 +114,7 @@ const getConnectionByLocation = (loc) => {
     case "Belagavi":
     case "Belgavi":
     case "Belagavi MP":
+    case "Belagavi 2":
       connection = conBelgavi;
       location = "Belagavi";
       break;
@@ -205,6 +207,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Gurgaon Sector 14":
+    case "Gurgaon Sector 14 - 2":
       connection = conGurgaon14;
       location = "Gurgaon-14";
       break;
@@ -222,6 +225,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Latur":
+    case "Latur - HO":
       connection = conLatur;
       location = "Latur";
       break;
@@ -292,16 +296,19 @@ const getConnectionByLocation = (loc) => {
 
     case "Ahmedabad":
     case "Ellisbridge":
+    case "Ellisbridge 2":
       connection = conAhmedabad;
       location = "Ahmedabad";
       break;
 
     case "Mohali":
+    case "Mohali 2":
       connection = conMohali;
       location = "Mohali";
       break;
 
     case "Aurangabad":
+    case "Aurangabad 2":
       connection = conAurangabad;
       location = "Aurangabad";
       break;
@@ -322,11 +329,13 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Bopal":
+    case "Bopal 2":
       connection = conBopal;
       location = "Bopal";
       break;
 
     case "Electronic City":
+    case "Electronic City 2":
       connection = conElectroniccity;
       location = "Electronic City";
       break;
@@ -339,6 +348,7 @@ const getConnectionByLocation = (loc) => {
 
     case "Adajan":
     case "Adajan Gam":
+    case "Adajan Helpline":
       connection = conAdajan;
       location = "Adajan";
       break;
@@ -348,6 +358,10 @@ const getConnectionByLocation = (loc) => {
       location = "Raipur";
       break;
 
+    case "Kalyan Nagar":
+      connection = conKalyanNagar;
+      location = "Kalyan Nagar";
+      break;
     default:
       connection = null;
       location = null;

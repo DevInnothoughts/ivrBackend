@@ -16,6 +16,12 @@ const {
   getIPDPatientsV1,
   getCallingListV1,
 } = require("../models/callingListModel");
+const {
+  getCallingListV2,
+  getExcludedEnquiries,
+} = require("../models/enquiryCallingListModel");
+
+const { getCallingCounts } = require("../models/callingCountsModel");
 
 router.get("/", async (req, res, next) => {
   try {
@@ -142,6 +148,33 @@ router.get("/todaysAppointments", async (req, res, next) => {
     console.log(req.query.location);
     const callingList = await getTodaysAppointment(req.query.location);
     res.status(200).send(callingList);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/counts", async (req, res, next) => {
+  try {
+    const counts = await getCallingCounts(req.query.location);
+    res.status(200).send(counts);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Enquiry Calls, with booked and visited patients removed
+router.get("/v2", async (req, res, next) => {
+  try {
+    res.status(200).send(await getCallingListV2(req.query.location));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Diagnostic: what v2 drops that v1 kept, and why
+router.get("/v2/excluded", async (req, res, next) => {
+  try {
+    res.status(200).send(await getExcludedEnquiries(req.query.location));
   } catch (err) {
     next(err);
   }

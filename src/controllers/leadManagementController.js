@@ -9,6 +9,12 @@ const {
   createSulekhaLead,
 } = require("../models/leadManagementModel");
 
+const {
+  getCallLeads,
+  updateStatusCall,
+  getUnmappedCallLocations,
+} = require("../models/callLeadsModel");
+
 router.get("/", async (req, res, next) => {
   try {
     const leads = await getLeads(req.query.location);
@@ -102,6 +108,35 @@ router.post("/sulekha-leads", async (req, res, next) => {
       message: "Lead saved successfully",
       data: result,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// List
+router.get("/call", async (req, res, next) => {
+  try {
+    res.status(200).send(await getCallLeads(req.query.location));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Action
+router.post("/updateStatus/call", async (req, res, next) => {
+  try {
+    const { status, note } = req.body;
+    res.status(200).send(await updateStatusCall(req.query.id, status, note));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Diagnostic — leads no branch can see
+router.get("/call/unmapped", async (req, res, next) => {
+  try {
+    const branches = (req.query.branches || "").split(",").filter(Boolean);
+    res.status(200).send(await getUnmappedCallLocations(branches));
   } catch (err) {
     next(err);
   }

@@ -49,6 +49,7 @@ const conElectroniccity = createPool("hmsElectroniccityDB");
 const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
 const conRaipur = createPool("hmsRaipurDB");
+const conKalyanNagar = createPool("hmsKalyanNagarDB");
 
 const providerMap = {
   C08RV: { locationName: "Test", connection: conTest },
@@ -73,7 +74,7 @@ const providerMap = {
   C44QH: { locationName: "Andheri", connection: conAndheri },
   C45S6: { locationName: "Sahakarnagar", connection: conSahakarnagar },
   C4768: { locationName: "Gurgaon-14", connection: conGurgaon14 },
-  HHC122: { locationName: "Gurgaon-49", connection: conGurgaon49 },
+  C4CVG: { locationName: "Gurgaon-49", connection: conGurgaon49 },
   HHC123: { locationName: "Kemps-Corner", connection: conkc },
   HHC124: { locationName: "Latur", connection: conLatur },
   HHC125: { locationName: "Indore", connection: conIndore },
@@ -95,9 +96,10 @@ const providerMap = {
   C493A: { locationName: "Kalyan", connection: conKalyan },
   HHC139: { locationName: "Bopal", connection: conBopal },
   C4AO7: { locationName: "Electronic City", connection: conElectroniccity },
-  HHC140: { locationName: "Adajan", connection: conAdajan },
+  C4DK3: { locationName: "Adajan", connection: conAdajan },
   C4D4S: { locationName: "RR Nagar", connection: conRRNagar },
-  HHC142: { LocationName: "Raipur", connection: conRaipur },
+  C4EDC: { LocationName: "Raipur", connection: conRaipur },
+  HHC140: { LocationName: "Kalyan Nagar", connection: conKalyanNagar },
 };
 
 const getConnectionByProviderId = (providerId) => {
