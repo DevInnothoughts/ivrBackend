@@ -1734,4 +1734,53 @@ const sendWhatsAppMsg = async (
 //   );
 // }
 
-module.exports = { addHelplineAppointment, addAppointmentV1 };
+// =====================================================================
+// V2 — books the appointment exactly as the current functions do, then
+// records the lead in hhc_appointments.master_enquiry with source +
+// branch name. The existing functions are called unchanged.
+// =====================================================================
+
+const {
+  SOURCES,
+  resolveSource,
+  saveAppointmentsToMaster,
+} = require("./masterEnquiryModel");
+
+async function saveAppointmentLeadToMaster(appointments, defaultSource) {
+  try {
+    const { location } = getConnectionByLocation(
+      appointments[0].patient_location,
+    );
+    await saveAppointmentsToMaster(appointments, {
+      branchName: location,
+      source: resolveSource(appointments[0], defaultSource),
+    });
+  } catch (masterError) {
+    // Never fail a booking because the master copy failed
+    console.error("Failed to save appointment to master_enquiry:", masterError);
+    return ` [master_enquiry save failed: ${masterError.code || masterError.message}]`;
+  }
+  return "";
+}
+
+async function addAppointmentV2(appointments) {
+  const result = await addAppointmentV1(appointments); // throws on failure
+  const masterNote = await saveAppointmentLeadToMaster(appointments, null);
+  return result + masterNote;
+}
+
+async function addHelplineAppointmentV2(appointments) {
+  const result = await addHelplineAppointment(appointments); // rejects on failure
+  const masterNote = await saveAppointmentLeadToMaster(
+    appointments,
+    SOURCES.HELPLINE,
+  );
+  return result + masterNote;
+}
+
+module.exports = {
+  addHelplineAppointment,
+  addAppointmentV1,
+  addAppointmentV2,
+  addHelplineAppointmentV2,
+};

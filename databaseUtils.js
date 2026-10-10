@@ -48,7 +48,7 @@ const conElectroniccity = createPool("hmsElectroniccityDB");
 const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
 const conRaipur = createPool("hmsRaipurDB");
-const conKalyanNagar = createPool("hmsKalyanNagarDB");
+const conKalyanNagar = createPool("hmsKalyannagarDB");
 
 const getConnectionByLocation = (loc) => {
   console.log("Get Connection Of:", loc);

@@ -5,6 +5,8 @@ const {
   addHelplineEnquiry,
   addHelplineSpam,
   addIVRSpam,
+  addEnquiryV2,
+  addHelplineEnquiryV2,
 } = require("../models/enquiryModel");
 
 router.post("/", async (req, res, next) => {
@@ -41,6 +43,27 @@ router.post("/helpline/spam", async (req, res, next) => {
   try {
     const result = await addHelplineSpam(req.body);
     console.log("Helpline Spam:", result);
+    res.status(200).send(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// V2 — also saves to hhc_appointments.master_enquiry (source + branch)
+router.post("/v2", async (req, res, next) => {
+  try {
+    const result = await addEnquiryV2(req.body);
+    console.log("Enquiry V2:", result);
+    res.status(200).send(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/helpline/v2", async (req, res, next) => {
+  try {
+    const result = await addHelplineEnquiryV2(req.body);
+    console.log("Helpline Enquiry V2:", result);
     res.status(200).send(result);
   } catch (err) {
     next(err);

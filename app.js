@@ -16,6 +16,9 @@ const ipdRatingController = require("./src/controllers/ipdRatingController");
 const insuranceController = require("./src/controllers/insuranceIntegrationController");
 const insuranceProdController = require("./src/controllers/insuranceProdIntegrationController");
 const pharmacyController = require("./src/controllers/pharmacyIntegrationController");
+const masterEnquiryController = require("./src/controllers/masterEnquiryController");
+const patientMasterController = require("./src/controllers/patientMasterController");
+const dashboardAuthController = require("./src/controllers/dashboardAuthController");
 
 app.use(express.json());
 app.use(cors());
@@ -37,6 +40,9 @@ app.use("/ivr/ipdRating", ipdRatingController);
 app.use("/ivr/prod/insurance", insuranceProdController);
 app.use("/ivr/insurance", insuranceController);
 app.use("/ivr/pharmacy", pharmacyController);
+app.use("/ivr/masterEnquiry", masterEnquiryController);
+app.use("/ivr/patientMaster", patientMasterController);
+app.use("/ivr/dashboardAuth", dashboardAuthController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
