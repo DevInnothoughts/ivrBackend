@@ -142,82 +142,160 @@ const insuranceCompanies = [
 ];
 
 const payerInsurerMap = {
+  // Medi Assist payer-insurer master — updated per IHX notice, Oct 2026.
+  // InsurerId/InsurerName are exactly as IHX sent them. Aliases hold old /
+  // pre-rebrand / HMS insurance_company names so existing invoices still match.
   "Medi Assist Insurance TPA India Pvt Ltd": {
     PayerId: "516572",
     Insurers: [
       { InsurerId: "1", InsurerName: "The New India Assurance Co. Ltd" },
-      { InsurerId: "2", InsurerName: "Reliance General Insurance Co. Ltd" },
+      {
+        InsurerId: "2",
+        InsurerName: "IndusInd General Insurance",
+        Aliases: [
+          "Reliance General Insurance Co. Ltd",
+          "Reliance General Insurance Co. Ltd.",
+          "Reliance General Insurance",
+        ],
+      },
       { InsurerId: "4", InsurerName: "The Oriental Insurance Co. Ltd." },
-      { InsurerId: "5", InsurerName: "United India Insurance Co. Ltd" },
+      { InsurerId: "5", InsurerName: "United India Insurance Co. Ltd." },
       { InsurerId: "6", InsurerName: "National Insurance Co. Ltd." },
       {
         InsurerId: "7",
         InsurerName: "ICICI Lombard General Insurance Co. Ltd.",
+        Aliases: ["Bharti AXA General Insurance Company Limited"],
       },
       {
         InsurerId: "8",
-        InsurerName: "Cholamandalam MS General Insurance Company Limited",
+        InsurerName: "Cholamandalam MS General Insurance Co. Ltd.",
+        Aliases: ["Cholamandalam MS General Insurance"],
       },
       {
         InsurerId: "9",
-        InsurerName: "Royal Sundaram General Insurance Company Limited",
+        InsurerName: "Royal Sundaram General Insurance Co. Ltd.",
       },
-      { InsurerId: "10", InsurerName: "IFFCO-TOKIO General Insurance Co. Ltd" },
+      {
+        InsurerId: "10",
+        InsurerName: "IFFCO TOKIO General Insurance Co. Ltd.",
+        Aliases: [
+          "IFFCO-TOKIO General Insurance Co. Ltd",
+          "IFFCO-TOKIO General Insurance Co. Limited",
+        ],
+      },
       {
         InsurerId: "11",
-        InsurerName: "HDFC Ergo General Insurance Company Limited",
+        InsurerName: "HDFC ERGO General Insurance Co.Ltd.",
+        Aliases: [
+          "HDFC Ergo General Insurance Company Limited",
+          "HDFC ERGO General Insurance",
+          "HDFC ERGO Health Insurance Ltd",
+        ],
       },
-      { InsurerId: "13", InsurerName: "HDFC ERGO Health Insurance Ltd" },
       {
-        InsurerId: "15",
-        InsurerName: "Bharti AXA General Insurance Company Limited",
+        InsurerId: "14",
+        InsurerName: "Generali Central Insurance Company Limited",
+        Aliases: [
+          "Future Generali India Insurance Company Ltd.",
+          "Future Generali India Insurance Company (Corporate)",
+        ],
       },
-      { InsurerId: "16", InsurerName: "RELIANCE NIPPON LIFE INSURANCE CO LTD" },
-      { InsurerId: "17", InsurerName: "Care Health Insurance" },
+      {
+        InsurerId: "16",
+        InsurerName: "INDUSIND NIPPON LIFE INSURANCE CO LTD",
+        Aliases: ["RELIANCE NIPPON LIFE INSURANCE CO LTD"],
+      },
+      {
+        InsurerId: "17",
+        InsurerName: "Universal Sompo General Insurance Co. Ltd.",
+      },
+      {
+        InsurerId: "18",
+        InsurerName: "Star Health and Allied Insurance Co.Ltd.",
+        Aliases: ["Star Health and Allied Insurance Co Ltd"],
+      },
+      {
+        InsurerId: "20",
+        InsurerName: "Care Health Insurance Ltd",
+        Aliases: ["Care Health Insurance"],
+      },
       {
         InsurerId: "21",
         InsurerName: "IndiaFirst Life Insurance Company Limited",
       },
-      { InsurerId: "22", InsurerName: "MaxBupa Health Insurance Co.Ltd" },
+      {
+        InsurerId: "22",
+        InsurerName: "Niva Bupa Health Insurance Co Ltd.",
+        Aliases: [
+          "MaxBupa Health Insurance Co.Ltd",
+          "Niva Bupa Health Insurance",
+        ],
+      },
       {
         InsurerId: "23",
-        InsurerName: "Bajaj Allianz General Insurance Co. Ltd.",
+        InsurerName: "Bajaj General Insurance Limited",
+        Aliases: [
+          "Bajaj Allianz General Insurance Co. Ltd.",
+          "Bajaj Allianz General Insurance",
+        ],
       },
-      { InsurerId: "24", InsurerName: "SBI General Insurance Company Limited" },
-      { InsurerId: "25", InsurerName: "Liberty General Insurance Limited" },
-      { InsurerId: "26", InsurerName: "Others" },
+      {
+        InsurerId: "24",
+        InsurerName: "SBI General Insurance Co. Ltd.",
+        Aliases: ["SBI General Insurance"],
+      },
+      { InsurerId: "25", InsurerName: "Liberty General Insurance Ltd." },
       {
         InsurerId: "28",
-        InsurerName: "Aditya Birla Health Insurance Co. Limited",
+        InsurerName: "Aditya Birla Health Insurance Co. Ltd.",
       },
       {
         InsurerId: "29",
-        InsurerName: "ManipalCigna Health Insurance Company Limited",
+        InsurerName: "Manipal Cigna Health Insurance Company Limited",
+        Aliases: ["ManipalCigna Health Insurance Company Limited"],
       },
       { InsurerId: "30", InsurerName: "Tata AIA Life Insurance" },
       {
         InsurerId: "32",
-        InsurerName: "Tata AIG General Insurance Company LTD",
+        InsurerName: "Tata AIG General Insurance Co. Ltd.",
+        Aliases: ["Tata AIG General Insurance"],
       },
       { InsurerId: "33", InsurerName: "Shikhar Insurance Co Ltd" },
-      { InsurerId: "34", InsurerName: "Go Digit General Insurance Limited" },
-      {
-        InsurerId: "35",
-        InsurerName: "Raheja QBE General Insurance Company Limited",
-      },
+      { InsurerId: "34", InsurerName: "Go Digit General Insurance Ltd" },
+      { InsurerId: "35", InsurerName: "Raheja QBE General Insurance Co. Ltd." },
       {
         InsurerId: "36",
-        InsurerName: "Magma HDI General Insurance Company LTD",
+        InsurerName: "Magma General Insurance Limited",
+        Aliases: ["Magma HDI General Insurance Company LTD"],
       },
-      { InsurerId: "37", InsurerName: "Navi General Insurance Limited" },
+      { InsurerId: "37", InsurerName: "Navi General Insurance Ltd." },
       {
         InsurerId: "38",
-        InsurerName: "Edelweiss General Insurance Company Limited",
+        InsurerName: "Zuno General Insurance Limited",
+        Aliases: ["Edelweiss General Insurance Company Limited"],
       },
       {
         InsurerId: "39",
-        InsurerName: "Future Generali India Insurance Company Ltd.",
+        InsurerName: "Acko General Insurance Ltd.",
+        Aliases: ["Acko General Insurance Limited"],
       },
+      {
+        InsurerId: "40",
+        InsurerName: "Zurich Kotak General Insurance Company (India) Limited",
+        Aliases: ["Kotak Mahindra General Insurance Company Ltd"],
+      },
+      { InsurerId: "41", InsurerName: "Shriram General Insurance Co Ltd" },
+      { InsurerId: "42", InsurerName: "Prudential Health Insurance" },
+      { InsurerId: "43", InsurerName: "Narayana Health Insurance" },
+      {
+        InsurerId: "44",
+        InsurerName: "ROYAL INSURANCE CORPORATION OF BHUTAN LIMITED",
+      },
+      {
+        InsurerId: "45",
+        InsurerName: "Galaxy Health Insurance Company Limited",
+      },
+      { InsurerId: "46", InsurerName: "Himalayan Everest Insurance Limited" },
     ],
   },
   "MDIndia Health Insurance TPA Pvt. Ltd.": {
@@ -1023,10 +1101,12 @@ async function searchPatient(providerID, uhid, mobile) {
 
             const insurerNameNormalized = normalize(row.InsurerName);
 
-            const matchedInsurer = payerData.Insurers.find((ins) => {
-              const mapNameNormalized = normalize(ins.InsurerName);
-              return insurerNameNormalized === mapNameNormalized;
-            });
+            // Match on the IHX name first, then any Aliases (old / pre-rebrand names)
+            const matchedInsurer = payerData.Insurers.find((ins) =>
+              [ins.InsurerName, ...(ins.Aliases || [])].some(
+                (name) => normalize(name) === insurerNameNormalized,
+              ),
+            );
 
             console.log("Matching insurer:", {
               payer: row.PayerName,
@@ -1378,10 +1458,12 @@ async function searchPatientProd(providerID, uhid, mobile) {
 
             const insurerNameNormalized = normalize(row.InsurerName);
 
-            const matchedInsurer = payerData.Insurers.find((ins) => {
-              const mapNameNormalized = normalize(ins.InsurerName);
-              return insurerNameNormalized === mapNameNormalized;
-            });
+            // Match on the IHX name first, then any Aliases (old / pre-rebrand names)
+            const matchedInsurer = payerData.Insurers.find((ins) =>
+              [ins.InsurerName, ...(ins.Aliases || [])].some(
+                (name) => normalize(name) === insurerNameNormalized,
+              ),
+            );
 
             console.log("Matching insurer:", {
               payer: row.PayerName,
