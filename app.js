@@ -5,6 +5,7 @@ const doctorController = require("./src/controllers/doctorController");
 const fdeController = require("./src/controllers/fdeController");
 const enquiryController = require("./src/controllers/enquiryController");
 const appointmentController = require("./src/controllers/appointmentController");
+const appointmentSlotController = require("./src/controllers/appointmentSlotController");
 const noteController = require("./src/controllers/noteController");
 const actionJLRController = require("./src/controllers/actionJLRController");
 const patientController = require("./src/controllers/patientController");
@@ -29,6 +30,7 @@ app.use("/ivr/fde", fdeController);
 app.use("/ivr/patient", patientController);
 app.use("/ivr/enquiry", enquiryController);
 app.use("/ivr/appointment", appointmentController);
+app.use("/ivr/appointment", appointmentSlotController); // new slot routes only (/slots, /slot-booking, /helpline/slot-booking)
 app.use("/ivr/addNote", noteController);
 app.use("/ivr/actionJLR", actionJLRController);
 app.use("/ivr/uploadCallLogs", uploadCallLogsController);
