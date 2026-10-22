@@ -1,5 +1,27 @@
 const { getConnectionByLocation } = require("../../databaseUtils");
 
+/**
+ * TAT columns, appended to every list query below.
+ *
+ * tat_minutes  arrival -> first Enquiry / Appointment (NULL until actioned)
+ * age_minutes  arrival -> now, used for "Waiting ..." on unattended leads
+ *
+ * Computed in MySQL so both ends use the same clock. actioned_at is set once,
+ * by updateStatus / updateStatusBot, and never overwritten.
+ * Needs web_bot_leads_tat_migration.sql.
+ *
+ * VERIFY: appointments.date must be the submission date-time. If it is a
+ * DATE column, or the patient's preferred appointment date, swap it for the
+ * column that holds when the form was submitted.
+ */
+const WEB_TAT_COLUMNS = `
+  TIMESTAMPDIFF(MINUTE, appointments.date, appointments.actioned_at) AS tat_minutes,
+  TIMESTAMPDIFF(MINUTE, appointments.date, NOW()) AS age_minutes`;
+
+const BOT_TAT_COLUMNS = `
+  TIMESTAMPDIFF(MINUTE, chatbot_leads.datetime, chatbot_leads.actioned_at) AS tat_minutes,
+  TIMESTAMPDIFF(MINUTE, chatbot_leads.datetime, NOW()) AS age_minutes`;
+
 async function getLeads(location) {
   const { connection } = getConnectionByLocation("lead");
   if (!connection) {
@@ -15,7 +37,7 @@ async function getLeads(location) {
       }
 
       let query = `
-        SELECT *
+        SELECT *, ${WEB_TAT_COLUMNS}
         FROM appointments 
         WHERE selected_area LIKE CONCAT('%', ?, '%') 
         ORDER BY appointment_id DESC
@@ -26,7 +48,7 @@ async function getLeads(location) {
 
       if (location === "DP Road") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -39,7 +61,7 @@ async function getLeads(location) {
       }
       if (location === "Salunke Vihar") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -52,7 +74,7 @@ async function getLeads(location) {
       }
       if (location === "Hinjewadi") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -64,7 +86,7 @@ async function getLeads(location) {
       }
       if (location === "JP Nagar") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -76,7 +98,7 @@ async function getLeads(location) {
       }
       if (location === "Sarjapura") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -88,7 +110,7 @@ async function getLeads(location) {
       }
       if (location === "Rajaji Nagar") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -100,7 +122,7 @@ async function getLeads(location) {
       }
       if (location === "Belgavi") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -112,7 +134,7 @@ async function getLeads(location) {
       }
       if (location === "Sahakar Nagar") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -124,7 +146,7 @@ async function getLeads(location) {
       }
       if (location === "Gurgaon Sector 14") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -136,7 +158,7 @@ async function getLeads(location) {
       }
       if (location === "Gurgaon Sector 49") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -148,7 +170,7 @@ async function getLeads(location) {
       }
       if (location === "Thane") {
         query = `
-          SELECT *
+          SELECT *, ${WEB_TAT_COLUMNS}
           FROM appointments 
           WHERE (
             selected_area LIKE CONCAT('%', ?) 
@@ -190,7 +212,7 @@ async function updateStatus(id, status, note) {
 
       const query = `
         UPDATE appointments
-        SET status = ?, note = ?
+        SET status = ?, note = ?, actioned_at = COALESCE(actioned_at, NOW())
         WHERE appointment_id = ?
       `;
 
@@ -219,7 +241,7 @@ async function getChatBotLeads(location) {
       if (err) return reject(err);
 
       let query = `
-        SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+        SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
         FROM chatbot_leads 
         WHERE (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%'))
         ORDER BY id DESC
@@ -229,7 +251,7 @@ async function getChatBotLeads(location) {
 
       if (location === "DP Road") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -244,7 +266,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Salunke Vihar") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -259,7 +281,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Hinjewadi") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -273,7 +295,7 @@ async function getChatBotLeads(location) {
 
       if (location === "HSR") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -287,7 +309,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Rajaji Nagar") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -301,7 +323,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Belgavi") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -315,7 +337,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Hyderabad") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -329,7 +351,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Gurgaon Sector 14") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -345,7 +367,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Gurgaon Sector 49") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -360,7 +382,7 @@ async function getChatBotLeads(location) {
 
       if (location === "Chinchwad") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -373,7 +395,7 @@ async function getChatBotLeads(location) {
       }
       if (location === "Vashi") {
         query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno, disease, chat_whatsapp_branch, query AS message, status, note
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno, disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
           FROM chatbot_leads 
           WHERE (
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
@@ -421,7 +443,7 @@ async function updateStatusBot(id, status, note) {
 
       const query = `
         UPDATE chatbot_leads
-        SET status = ?, note=?
+        SET status = ?, note = ?, actioned_at = COALESCE(actioned_at, NOW())
         WHERE id = ?
       `;
 

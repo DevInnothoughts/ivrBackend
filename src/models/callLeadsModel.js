@@ -149,7 +149,12 @@ async function getCallLeads(location) {
       utm_source,
       pageUrl,
       status,
-      note
+      note,
+      -- TAT. Computed in MySQL so created_at, actioned_at and NOW() share one
+      -- clock; doing it on the phone would mix the DB timezone with the
+      -- device's. Needs call_leads_tat_migration.sql.
+      TIMESTAMPDIFF(MINUTE, created_at, actioned_at) AS tat_minutes,
+      TIMESTAMPDIFF(MINUTE, created_at, NOW())       AS age_minutes
     FROM call_leads
     WHERE phoneno IS NOT NULL
       AND phoneno <> ''
@@ -206,7 +211,11 @@ async function updateStatusCall(id, status, note) {
 
       const query = `
         UPDATE call_leads
-        SET status = ?, note = ?
+        SET status = ?,
+            note = ?,
+            -- First action only: an Enquiry later converted to an
+            -- Appointment keeps its original response time.
+            actioned_at = COALESCE(actioned_at, NOW())
         WHERE id = ?
       `;
 
