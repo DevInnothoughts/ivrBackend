@@ -257,6 +257,7 @@ async function getChatBotLeads(location) {
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
             OR (branch LIKE '%Tilak Road%' OR chat_whatsapp_branch LIKE '%Tilak Road%')
             OR (branch LIKE '%Dhole Patil Road%' OR chat_whatsapp_branch LIKE '%Dhole Patil Road%')
+            OR (branch = '' AND chat_whatsapp_branch = '')
           )
           ORDER BY id DESC
           LIMIT 100
@@ -393,26 +394,12 @@ async function getChatBotLeads(location) {
         `;
         queryParams = [location, location];
       }
-      if (location === "Vashi") {
-        query = `
-          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno, disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
-          FROM chatbot_leads 
-          WHERE (
-            (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
-            OR (branch = '' AND chat_whatsapp_branch = '')
-          )
-          ORDER BY id DESC
-          LIMIT 100
-        `;
-        queryParams = [location, location];
-      }
-
       tempCon.query(query, queryParams, function (error, rows) {
         tempCon.release();
         if (error) return reject(error);
         rows.forEach((row) => {
           if (
-            location === "Vashi" &&
+            location === "DP Road" &&
             row.branch === "" &&
             row.chat_whatsapp_branch === ""
           ) {
