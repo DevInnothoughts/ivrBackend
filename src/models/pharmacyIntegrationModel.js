@@ -50,6 +50,7 @@ const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
 const conRaipur = createPool("hmsRaipurDB");
 const conKalyanNagar = createPool("hmsKalyannagarDB");
+const conGachibowli = createPool("hmsGachibowliDB");
 
 const providerMap = {
   C08RV: { locationName: "Test", connection: conTest },
@@ -99,7 +100,8 @@ const providerMap = {
   C4DK3: { locationName: "Adajan", connection: conAdajan },
   C4D4S: { locationName: "RR Nagar", connection: conRRNagar },
   C4EDC: { LocationName: "Raipur", connection: conRaipur },
-  HHC140: { LocationName: "Kalyan Nagar", connection: conKalyanNagar },
+  C4EXN: { LocationName: "Kalyan Nagar", connection: conKalyanNagar },
+  HHC141: { LocationName: "Gachibowli", connection: conGachibowli },
 };
 
 const getConnectionByProviderId = (providerId) => {

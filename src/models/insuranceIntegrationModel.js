@@ -50,6 +50,7 @@ const conRRNagar = createPool("hmsRRNagarDB");
 const conAdajan = createPool("hmsAdajanDB");
 const conRaipur = createPool("hmsRaipurDB");
 const conKalyanNagar = createPool("hmsKalyannagarDB");
+const conGachibowli = createPool("hmsGachibowliDB");
 
 const providerMap = {
   HHC000: { locationName: "Test", connection: conTest },
@@ -100,6 +101,7 @@ const providerMap = {
   HHC145: { locationName: "RR Nagar", connection: conRRNagar },
   HHC146: { locationName: "Raipur", connection: conRaipur },
   HHC147: { locationName: "Kalyan Nagar", connection: conKalyanNagar },
+  HHC148: { locationName: "Gachibowli", connection: conGachibowli },
 };
 
 const insuranceCompanies = [
