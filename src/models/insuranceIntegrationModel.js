@@ -1514,9 +1514,19 @@ async function savePatientStatusUpdateProd(payload) {
         claimedAmount,
         approvedAmount,
         settledAmount,
+        tdsAmount,
         utrNo,
         remarks,
       } = payload;
+
+      // IHX Claim Status Master → "Discharge Approved" (Hospital Stage: Discharge)
+      const DISCHARGE_APPROVED_STATUS_ID = 37;
+      const isDischargeApproved =
+        Number(statusId) === DISCHARGE_APPROVED_STATUS_ID;
+
+      // IHX Claim Status Master → "Settled" (Hospital Stage: Settlement)
+      const SETTLED_STATUS_ID = 12;
+      const isSettled = Number(statusId) === SETTLED_STATUS_ID;
 
       // Build dynamic WHERE condition based on available identifiers
       const identifiers = [];
@@ -1536,6 +1546,7 @@ async function savePatientStatusUpdateProd(payload) {
       }
 
       if (identifiers.length === 0) {
+        tempCon.release();
         return reject(new Error("At least one identifier must be provided"));
       }
 
@@ -1550,6 +1561,7 @@ async function savePatientStatusUpdateProd(payload) {
         claimedAmount: claimedAmount,
         approvedAmount: approvedAmount,
         settledAmount: settledAmount,
+        tdsAmount: tdsAmount,
         utrNo: utrNo,
         remarks: remarks,
       };
@@ -1748,16 +1760,47 @@ async function savePatientStatusUpdateProd(payload) {
             });
           }
 
-          // ✅ CASE 2: Pre-Auth Approved → NEW logic
-          if (statusName === "Pre-Auth Approved" && approvedAmount != null) {
+          // ✅ CASE 2: Discharge Approved (statusId 37) → record approved amount.
+          // Approved amount is recorded ONLY for this status; all other
+          // statuses (Pre-Auth Approved, Enhancement Approved, etc.) are ignored.
+          if (
+            isDischargeApproved &&
+            invoiceId &&
+            patientId &&
+            approvedAmount != null
+          ) {
             await new Promise((res, rej) => {
               tempCon.query(
                 `UPDATE invoice
                   SET receivedamt = ?
-                  WHERE patient_id = ? AND invoice_id = ? 
+                  WHERE patient_id = ? AND invoice_id = ?
                   ORDER BY invoice_id DESC
                    LIMIT 1`,
                 [approvedAmount, patientId, invoiceId],
+                (err, result) => (err ? rej(err) : res(result)),
+              );
+            });
+          }
+
+          // ✅ CASE 3: Settled (statusId 12) → store tdsAmount in
+          // insurance_invoice.tdsamt of the respective invoice.
+          // TDS is recorded ONLY for this status; tdsAmount sent with any
+          // other status is ignored.
+          if (
+            isSettled &&
+            invoiceId &&
+            patientId &&
+            tdsAmount !== undefined &&
+            tdsAmount !== null &&
+            tdsAmount !== ""
+          ) {
+            await new Promise((res, rej) => {
+              tempCon.query(
+                `UPDATE insurance_invoice
+                  SET tdsamt = ?
+                  WHERE invoiceid = ? AND patientid = ?
+                  LIMIT 1`,
+                [Number(tdsAmount), invoiceId, patientId],
                 (err, result) => (err ? rej(err) : res(result)),
               );
             });

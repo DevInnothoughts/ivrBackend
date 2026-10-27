@@ -173,6 +173,7 @@ router.post("/v1/patientStatusUpdate", async (req, res) => {
     claimedAmount,
     approvedAmount,
     settledAmount,
+    tdsAmount,
     utrNo,
     remarks,
   } = req.body;
@@ -208,6 +209,7 @@ router.post("/v1/patientStatusUpdate", async (req, res) => {
       claimedAmount,
       approvedAmount,
       settledAmount,
+      tdsAmount,
       utrNo,
       remarks,
     });
