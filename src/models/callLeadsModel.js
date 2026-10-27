@@ -71,6 +71,26 @@ const LOCATION_ALIASES = {
   // appear only in GET /leadManagement/call/unmapped.
 };
 
+/**
+ * Branches whose name is a substring of another branch's name.
+ *
+ * "Kalyan" is inside "Kalyan Nagar", so the substring fallback would show
+ * Kalyan Nagar leads to Kalyan. Each entry lists LIKE patterns the branch
+ * must NOT match. "%Kalyan%Nagar%" also catches "Kalyannagar" and
+ * "Kalyan-Nagar".
+ */
+const LOCATION_EXCLUSIONS = {
+  Kalyan: ["%Kalyan%Nagar%"],
+};
+
+/**
+ * Extra LIKE patterns a branch should match, for spellings the plain
+ * substring fallback misses ("Kalyannagar" has no space).
+ */
+const LOCATION_PATTERNS = {
+  "Kalyan Nagar": ["%Kalyan%Nagar%"],
+};
+
 /* ------------------------------------------------------------------ */
 /* Treatment inference                                                 */
 /* ------------------------------------------------------------------ */
@@ -140,6 +160,14 @@ async function getCallLeads(location) {
     ? ` OR LOWER(call_location) IN (${aliases.map(() => "LOWER(?)").join(", ")})`
     : "";
 
+  const patterns = LOCATION_PATTERNS[location] || [];
+  const patternClause = patterns.map(() => " OR call_location LIKE ?").join("");
+
+  const exclusions = LOCATION_EXCLUSIONS[location] || [];
+  const exclusionClause = exclusions
+    .map(() => " AND call_location NOT LIKE ?")
+    .join("");
+
   const query = `
     SELECT
       id            AS appointment_id,
@@ -158,12 +186,12 @@ async function getCallLeads(location) {
     FROM call_leads
     WHERE phoneno IS NOT NULL
       AND phoneno <> ''
-      AND (call_location LIKE CONCAT('%', ?, '%')${aliasClause})
+      AND (call_location LIKE CONCAT('%', ?, '%')${aliasClause}${patternClause})${exclusionClause}
     ORDER BY id DESC
     LIMIT 100
   `;
 
-  const params = [location, ...aliases];
+  const params = [location, ...aliases, ...patterns, ...exclusions];
 
   return new Promise((resolve, reject) => {
     connection.getConnection(function (err, tempCon) {

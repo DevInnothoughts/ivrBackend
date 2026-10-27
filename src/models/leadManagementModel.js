@@ -22,6 +22,18 @@ const BOT_TAT_COLUMNS = `
   TIMESTAMPDIFF(MINUTE, chatbot_leads.datetime, chatbot_leads.actioned_at) AS tat_minutes,
   TIMESTAMPDIFF(MINUTE, chatbot_leads.datetime, NOW()) AS age_minutes`;
 
+/**
+ * Kalyan vs Kalyan Nagar.
+ *
+ * Every list query matches the branch with LIKE '%<branch>%', and "Kalyan"
+ * is a substring of "Kalyan Nagar" — so the default query leaks Kalyan Nagar
+ * leads into the Kalyan list. Kalyan therefore excludes anything that looks
+ * like Kalyan Nagar, and Kalyan Nagar matches its own spellings
+ * ("Kalyan Nagar", "Kalyannagar", "Kalyan-Nagar") with one pattern.
+ * MySQL's default collation is case-insensitive, so case is covered too.
+ */
+const KALYAN_NAGAR_PATTERN = "%Kalyan%Nagar%";
+
 async function getLeads(location) {
   const { connection } = getConnectionByLocation("lead");
   if (!connection) {
@@ -167,6 +179,27 @@ async function getLeads(location) {
           ORDER BY appointment_id DESC
           LIMIT 100
         `;
+      }
+      if (location === "Kalyan") {
+        query = `
+          SELECT *, ${WEB_TAT_COLUMNS}
+          FROM appointments 
+          WHERE selected_area LIKE CONCAT('%', ?, '%')
+            AND selected_area NOT LIKE ?
+          ORDER BY appointment_id DESC
+          LIMIT 100
+        `;
+        queryParams = [location, KALYAN_NAGAR_PATTERN];
+      }
+      if (location === "Kalyan Nagar") {
+        query = `
+          SELECT *, ${WEB_TAT_COLUMNS}
+          FROM appointments 
+          WHERE selected_area LIKE ?
+          ORDER BY appointment_id DESC
+          LIMIT 100
+        `;
+        queryParams = [KALYAN_NAGAR_PATTERN];
       }
       if (location === "Thane") {
         query = `
@@ -394,6 +427,36 @@ async function getChatBotLeads(location) {
         `;
         queryParams = [location, location];
       }
+      if (location === "Kalyan") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
+          FROM chatbot_leads 
+          WHERE (
+            (branch LIKE CONCAT('%', ?, '%') AND branch NOT LIKE ?)
+            OR (chat_whatsapp_branch LIKE CONCAT('%', ?, '%') AND chat_whatsapp_branch NOT LIKE ?)
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [
+          location,
+          KALYAN_NAGAR_PATTERN,
+          location,
+          KALYAN_NAGAR_PATTERN,
+        ];
+      }
+
+      if (location === "Kalyan Nagar") {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
+          FROM chatbot_leads 
+          WHERE (branch LIKE ? OR chat_whatsapp_branch LIKE ?)
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [KALYAN_NAGAR_PATTERN, KALYAN_NAGAR_PATTERN];
+      }
+
       tempCon.query(query, queryParams, function (error, rows) {
         tempCon.release();
         if (error) return reject(error);
