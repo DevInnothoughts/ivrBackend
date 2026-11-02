@@ -315,5 +315,9 @@ module.exports = {
   updateStatusCall,
   getUnmappedCallLocations,
   LOCATION_ALIASES,
+  // Exported for statusSyncModel.js, so the sync decides "same branch" with
+  // exactly the rules getCallLeads uses rather than a copy that can drift.
+  LOCATION_PATTERNS,
+  LOCATION_EXCLUSIONS,
   inferTreatment,
 };

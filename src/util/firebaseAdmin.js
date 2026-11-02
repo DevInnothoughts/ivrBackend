@@ -10,6 +10,7 @@ const path = require("path");
 const admin = require("firebase-admin");
 
 let app = null;
+let db = null;
 
 function getFirestore() {
   if (!app) {
@@ -35,7 +36,33 @@ function getFirestore() {
       "dashboard", // named app, so it can't clash with any other initializeApp()
     );
   }
-  return app.firestore();
+  if (!db) {
+    db = app.firestore();
+    // REST instead of gRPC: no long-lived channel to open, so the first call
+    // after a restart takes well under a second instead of ~10s. Must be set
+    // before the first read/write, hence the cached instance.
+    db.settings({ preferRest: true });
+  }
+  return db;
+}
+
+/**
+ * Fetch the access token and open the connection ahead of time, so the first
+ * real request (status sync, dashboard login) doesn't pay for it. Never
+ * throws — a missing key is reported once and the server starts normally.
+ */
+function warmUpFirestore() {
+  try {
+    const started = Date.now();
+    getFirestore()
+      .collection("HHCLocations")
+      .limit(1)
+      .get()
+      .then(() => console.log(`Firestore ready (${Date.now() - started}ms)`))
+      .catch((e) => console.warn("Firestore warm-up failed:", e.message));
+  } catch (e) {
+    console.warn("Firestore not configured:", e.message);
+  }
 }
 
 /** users/0XXXXXXXXXX — same document id the mobile app reads */
@@ -47,4 +74,5 @@ async function getUserByMobile(mobile10) {
   return snap.exists ? snap.data() : null;
 }
 
-module.exports = { getUserByMobile };
+// getFirestore is also used by statusSyncModel.js to update IVR call docs.
+module.exports = { getUserByMobile, getFirestore, warmUpFirestore };

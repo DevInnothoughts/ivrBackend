@@ -10,13 +10,13 @@ const { getConnectionByLocation } = require("../../databaseUtils");
  * by updateStatus / updateStatusBot, and never overwritten.
  * Needs web_bot_leads_tat_migration.sql.
  *
- * VERIFY: appointments.date must be the submission date-time. If it is a
- * DATE column, or the patient's preferred appointment date, swap it for the
- * column that holds when the form was submitted.
+ * Web leads are timed from appointments.created_at (when the form came in).
+ * appointments.date is the patient's chosen appointment date, not arrival
+ * (confirmed by Team HHC, Nov 2026).
  */
 const WEB_TAT_COLUMNS = `
-  TIMESTAMPDIFF(MINUTE, appointments.date, appointments.actioned_at) AS tat_minutes,
-  TIMESTAMPDIFF(MINUTE, appointments.date, NOW()) AS age_minutes`;
+  TIMESTAMPDIFF(MINUTE, appointments.created_at, appointments.actioned_at) AS tat_minutes,
+  TIMESTAMPDIFF(MINUTE, appointments.created_at, NOW()) AS age_minutes`;
 
 const BOT_TAT_COLUMNS = `
   TIMESTAMPDIFF(MINUTE, chatbot_leads.datetime, chatbot_leads.actioned_at) AS tat_minutes,
@@ -290,7 +290,9 @@ async function getChatBotLeads(location) {
             (branch LIKE CONCAT('%', ?, '%') OR chat_whatsapp_branch LIKE CONCAT('%', ?, '%')) 
             OR (branch LIKE '%Tilak Road%' OR chat_whatsapp_branch LIKE '%Tilak Road%')
             OR (branch LIKE '%Dhole Patil Road%' OR chat_whatsapp_branch LIKE '%Dhole Patil Road%')
-            OR (branch = '' AND chat_whatsapp_branch = '')
+            -- Unassigned leads (no branch at all) land here for transfer.
+            -- NULL as well as '' — a NULL row matched no branch's list.
+            OR (COALESCE(branch, '') = '' AND COALESCE(chat_whatsapp_branch, '') = '')
           )
           ORDER BY id DESC
           LIMIT 100
@@ -463,8 +465,8 @@ async function getChatBotLeads(location) {
         rows.forEach((row) => {
           if (
             location === "DP Road" &&
-            row.branch === "" &&
-            row.chat_whatsapp_branch === ""
+            !String(row.branch ?? "").trim() &&
+            !String(row.chat_whatsapp_branch ?? "").trim()
           ) {
             row.message = `OTHER BRANCH -${row.message}`;
           }

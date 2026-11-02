@@ -20,6 +20,7 @@ const pharmacyController = require("./src/controllers/pharmacyIntegrationControl
 const masterEnquiryController = require("./src/controllers/masterEnquiryController");
 const patientMasterController = require("./src/controllers/patientMasterController");
 const dashboardAuthController = require("./src/controllers/dashboardAuthController");
+const statusSyncController = require("./src/controllers/statusSyncController");
 
 app.use(express.json());
 app.use(cors());
@@ -45,6 +46,7 @@ app.use("/ivr/pharmacy", pharmacyController);
 app.use("/ivr/masterEnquiry", masterEnquiryController);
 app.use("/ivr/patientMaster", patientMasterController);
 app.use("/ivr/dashboardAuth", dashboardAuthController);
+app.use("/ivr/statusSync", statusSyncController); // cross-source Appointment / Enquiry sync
 
 // Error handling middleware
 app.use((err, req, res, next) => {
