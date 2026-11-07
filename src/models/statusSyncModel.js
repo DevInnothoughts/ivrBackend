@@ -38,6 +38,7 @@
  */
 
 const { createPool } = require("../../dbconfig");
+const { getConnectionByLocation } = require("../../databaseUtils");
 const {
   LOCATION_ALIASES,
   LOCATION_PATTERNS,
@@ -385,6 +386,7 @@ async function syncIvr(ctx) {
     const callDate = istDateKeyFromSeconds(d.timestamp || doc.id);
     if (!callDate || callDate < ctx.sourceDate) return;
 
+    ctx.ivrUpdated.push(d); // mirrored into MySQL IVRdata by syncIvrData()
     batch.update(doc.ref, {
       Action: ctx.status,
       enquiryType:
@@ -400,6 +402,81 @@ async function syncIvr(ctx) {
   });
 
   if (count > 0) await batch.commit();
+  return count;
+}
+
+/* ------------------------------------------------------------------ */
+/* IVR calls (MySQL IVRdata)                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Mirror the IVR calls just updated in Firestore into the branch's MySQL
+ * IVRdata table, so MySQL shows the same status and note as the app.
+ *
+ * Matching is exactly what the app's own IVR actions use (addNote in
+ * noteModel.js): branch DB from the call's Destination_Name, then
+ * call_date + call_time + caller_no, latest row. Call_Date is passed through
+ * unchanged — IVRdata stores the provider's format too.
+ *
+ * Only `status` and `note` are written. No appointment_enquiry / appointment
+ * row is created, so enquiry and booking counts stay one per real action.
+ *
+ * The status guard is repeated in SQL so a row actioned meanwhile is left
+ * alone; Spam is never touched (those calls were already skipped above).
+ */
+async function syncIvrData(ctx) {
+  let count = 0;
+  for (const d of ctx.ivrUpdated) {
+    if (!d.Destination_Name || !d.Call_Date || !d.Call_Time || !d.Caller_Number)
+      continue;
+
+    const { connection: pool } = getConnectionByLocation(d.Destination_Name);
+    if (!pool) {
+      console.warn(
+        `statusSync: no database for IVR line "${d.Destination_Name}"`,
+      );
+      continue;
+    }
+
+    const match = [d.Call_Date, d.Call_Time, d.Caller_Number];
+    let result;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      result = await query(
+        pool,
+        `
+          UPDATE IVRdata
+          SET status = ?, note = ?
+          WHERE call_date = ? AND call_time = ? AND caller_no = ?
+            AND ${STATUS_GUARD_SQL}
+          ORDER BY ivr_id DESC
+          LIMIT 1
+        `,
+        [ctx.status, ctx.note, ...match, ctx.status],
+      );
+    } catch (e) {
+      // Older branch databases may have no IVRdata.status column (the app's
+      // own IVR actions only write `note`). Write the note alone there; the
+      // Firestore guard above has already left actioned / spam calls out.
+      if (e && e.code === "ER_BAD_FIELD_ERROR") {
+        // eslint-disable-next-line no-await-in-loop
+        result = await query(
+          pool,
+          `
+            UPDATE IVRdata
+            SET note = ?
+            WHERE call_date = ? AND call_time = ? AND caller_no = ?
+            ORDER BY ivr_id DESC
+            LIMIT 1
+          `,
+          [ctx.note, ...match],
+        );
+      } else {
+        throw e;
+      }
+    }
+    count += (result && result.affectedRows) || 0;
+  }
   return count;
 }
 
@@ -463,6 +540,7 @@ function startStatusSync(input) {
     sourceDate: input.sourceDate,
     location: input.location ? String(input.location).trim() : "",
     mobile: input.mobile,
+    ivrUpdated: [], // Firestore IVR docs changed; mirrored into IVRdata
   };
 
   const bad = (msg) => {
@@ -579,6 +657,8 @@ async function runSync(pool, ctx) {
     await runTarget(summary, t.source, () => syncLeadTable(pool, t, ctx));
   }
   await ivr;
+  // After Firestore, so it only touches calls the sync actually changed.
+  await runTarget(summary, "ivrdb", () => syncIvrData(ctx));
 
   summary.ms = Date.now() - started;
   console.log(
