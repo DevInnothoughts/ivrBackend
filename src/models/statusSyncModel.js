@@ -180,6 +180,12 @@ const like = (value, pattern) => {
 const contains = (loc) => `%${loc}%`;
 const KALYAN_NAGAR_PATTERN = "%Kalyan%Nagar%";
 
+// Ahmedabad bot leads — must match getChatBotLeads() in leadManagementModel.js.
+const ELLISBRIDGE_LOGINS = ["Ahmedabad", "Ellisbridge", "Ellisbridge 2"];
+const ELLISBRIDGE_PATTERNS = ["%Ellis%", "%Ahmedabad%"];
+const BOPAL_LOGINS = ["Bopal", "Bopal 2"];
+const BOPAL_PATTERN = "%Bopal%";
+
 /**
  * Web leads (appointments.selected_area). Mirrors getLeads(): the default is
  * a substring match; the special branches use "ends with branch name" plus
@@ -243,6 +249,15 @@ const matchBot = (row, loc) => {
   }
   if (loc === "Kalyan Nagar") {
     return cols.some((v) => like(v, KALYAN_NAGAR_PATTERN));
+  }
+  if (ELLISBRIDGE_LOGINS.includes(loc)) {
+    return cols.some(
+      (v) =>
+        ELLISBRIDGE_PATTERNS.some((p) => like(v, p)) && !like(v, BOPAL_PATTERN),
+    );
+  }
+  if (BOPAL_LOGINS.includes(loc)) {
+    return cols.some((v) => like(v, BOPAL_PATTERN));
   }
 
   const patterns = [contains(loc), ...(BOT_EXTRAS[loc] || [])];

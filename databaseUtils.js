@@ -74,6 +74,7 @@ const getConnectionByLocation = (loc) => {
     case "Pune station 1":
     case "Pune station 2":
     case "Pune Station 3":
+    case "Aditi DP":
       connection = conDP;
       location = "DP Road";
       break;

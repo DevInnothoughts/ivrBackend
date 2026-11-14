@@ -34,6 +34,24 @@ const BOT_TAT_COLUMNS = `
  */
 const KALYAN_NAGAR_PATTERN = "%Kalyan%Nagar%";
 
+/**
+ * Ahmedabad: Ellisbridge vs Bopal (bot leads).
+ *
+ * The chatbot wrote the city name ("Ahmedabad" / "AHMEDABAD") until
+ * Aug-Sep 2026, then switched to the branch names "Ellisbridge" and "Bopal".
+ * A plain LIKE '%Ahmedabad%' therefore stopped finding new Ellisbridge leads,
+ * and "Ellisbridge 2" / "Bopal 2" logins matched nothing at all.
+ *
+ * Ellisbridge, under any of its login names, owns its own spelling plus the
+ * old generic city leads; anything naming Bopal is always excluded. Bopal,
+ * under either login name, matches its own spelling only.
+ * Confirmed from chatbot_leads data, Nov 2026.
+ */
+const ELLISBRIDGE_LOGINS = ["Ahmedabad", "Ellisbridge", "Ellisbridge 2"];
+const ELLISBRIDGE_PATTERNS = ["%Ellis%", "%Ahmedabad%"];
+const BOPAL_LOGINS = ["Bopal", "Bopal 2"];
+const BOPAL_PATTERN = "%Bopal%";
+
 async function getLeads(location) {
   const { connection } = getConnectionByLocation("lead");
   if (!connection) {
@@ -457,6 +475,36 @@ async function getChatBotLeads(location) {
           LIMIT 100
         `;
         queryParams = [KALYAN_NAGAR_PATTERN, KALYAN_NAGAR_PATTERN];
+      }
+
+      if (ELLISBRIDGE_LOGINS.includes(location)) {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
+          FROM chatbot_leads 
+          WHERE (
+            ((branch LIKE ? OR branch LIKE ?) AND branch NOT LIKE ?)
+            OR ((chat_whatsapp_branch LIKE ? OR chat_whatsapp_branch LIKE ?) AND chat_whatsapp_branch NOT LIKE ?)
+          )
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [
+          ...ELLISBRIDGE_PATTERNS,
+          BOPAL_PATTERN,
+          ...ELLISBRIDGE_PATTERNS,
+          BOPAL_PATTERN,
+        ];
+      }
+
+      if (BOPAL_LOGINS.includes(location)) {
+        query = `
+          SELECT id AS appointment_id, datetime AS date, name, branch, contact AS phoneno,  disease, chat_whatsapp_branch, query AS message, status, note, ${BOT_TAT_COLUMNS}
+          FROM chatbot_leads 
+          WHERE (branch LIKE ? OR chat_whatsapp_branch LIKE ?)
+          ORDER BY id DESC
+          LIMIT 100
+        `;
+        queryParams = [BOPAL_PATTERN, BOPAL_PATTERN];
       }
 
       tempCon.query(query, queryParams, function (error, rows) {
