@@ -101,7 +101,7 @@ const providerMap = {
   C4D4S: { locationName: "RR Nagar", connection: conRRNagar },
   C4EDC: { LocationName: "Raipur", connection: conRaipur },
   C4EXN: { LocationName: "Kalyan Nagar", connection: conKalyanNagar },
-  HHC141: { LocationName: "Gachibowli", connection: conGachibowli },
+  C4FXH: { LocationName: "Gachibowli", connection: conGachibowli },
 };
 
 const getConnectionByProviderId = (providerId) => {

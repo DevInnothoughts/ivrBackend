@@ -366,6 +366,7 @@ const getConnectionByLocation = (loc) => {
       break;
 
     case "Gachibowli":
+    case "Gachibowli Helpline":
       connection = conGachibowli;
       location = "Gachibowli";
       break;
